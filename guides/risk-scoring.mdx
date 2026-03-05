@@ -1,0 +1,618 @@
+---
+title: Risk Scoring
+description: Understand how Envark calculates risk scores and identifies issues in your environment variable usage
+---
+
+Envark analyzes your environment variables to identify potential issues, security risks, and configuration problems. Each variable receives a risk score and classification based on multiple factors.
+
+## Risk Levels
+
+Envark classifies environment variables into five risk levels:
+
+| Level | Score | Icon | Description |
+|-------|-------|------|-------------|
+| **Critical** | 5 | 🔴 | Immediate action required - production blocker |
+| **High** | 4 | 🟠 | Serious issue - potential security or stability risk |
+| **Medium** | 3 | 🟡 | Important issue - should be addressed soon |
+| **Low** | 1-2 | 🟢 | Minor issue - nice to have fixed |
+| **Info** | 0 | ⚪ | Informational - no action needed |
+
+---
+
+## Risk Calculation Algorithm
+
+<Note>
+  The risk score is calculated using the `calculateRiskScore()` function from `src/core/analyzer.ts`.
+</Note>
+
+### Score Components
+
+Envark builds a cumulative risk score (0-5) by evaluating multiple conditions:
+
+<AccordionGroup>
+  <Accordion title="Critical: Missing Variable (+5 points)">
+    
+**Condition:** Variable is used in code but never defined anywhere and has no default value.
+
+```typescript
+if (variable.usedInCode && !variable.definedInEnvFile && !variable.hasDefault) {
+    score += 5;
+}
+```
+
+**Example:**
+```javascript
+// Code uses DATABASE_URL
+const db = connect(process.env.DATABASE_URL);
+
+// ❌ Not in .env
+// ❌ Not in .env.example  
+// ❌ No default value
+// Result: CRITICAL - Score +5
+```
+
+**Impact:** Application will fail at runtime.
+
+  </Accordion>
+  
+  <Accordion title="High: Exposed Secret (+4 points)">
+    
+**Condition:** Variable name looks like a secret, defined in `.env` but not in `.env.example`.
+
+```typescript
+if (variable.definedInEnvFile && 
+    !variable.definedInExample && 
+    looksLikeSecret(variable.name)) {
+    score += 4;
+}
+```
+
+**Secret Detection Patterns:**
+```regex
+/SECRET/i
+/PASSWORD/i
+/PASS$/i
+/TOKEN/i
+/KEY$/i
+/API_KEY/i
+/PRIVATE/i
+/CREDENTIAL/i
+/AUTH/i
+```
+
+**Example:**
+```bash
+# .env (committed to git)
+API_SECRET_KEY=super-secret-value
+
+# .env.example (missing)
+# Result: HIGH - Score +4
+```
+
+**Impact:** Potential secret leak if `.env` is committed to version control.
+
+  </Accordion>
+  
+  <Accordion title="Medium: Multi-Use Without Default (+3 points)">
+    
+**Condition:** Used in multiple files with no default value.
+
+```typescript
+if (variable.usedInCode && 
+    variable.usages.length > 2 && 
+    !variable.hasDefault) {
+    score += 3;
+}
+```
+
+**Example:**
+```javascript
+// src/api/client.ts
+const url = process.env.API_URL;
+
+// src/config/api.ts  
+const endpoint = process.env.API_URL;
+
+// src/services/fetch.ts
+const base = process.env.API_URL;
+
+// No default provided anywhere
+// Result: MEDIUM - Score +3
+```
+
+**Impact:** Multiple points of failure if variable is not set.
+
+  </Accordion>
+  
+  <Accordion title="Low: Undocumented (+1 point)">
+    
+**Condition:** Not documented and used in code.
+
+```typescript
+if (!variable.isDocumented && variable.usedInCode) {
+    score += 1;
+}
+```
+
+**Example:**
+```bash
+# .env
+CACHE_TTL=3600
+
+# .env.example
+# (no mention of CACHE_TTL)
+
+# Result: LOW - Score +1
+```
+
+**Impact:** New developers won't know this variable exists.
+
+  </Accordion>
+  
+  <Accordion title="Low: Dead Variable (+1 point)">
+    
+**Condition:** Defined in `.env` but never used in code.
+
+```typescript
+if (variable.definedInEnvFile && !variable.usedInCode) {
+    score += 1;
+}
+```
+
+**Example:**
+```bash
+# .env
+OLD_FEATURE_FLAG=true
+
+# No usage in any source files
+# Result: LOW - Score +1
+```
+
+**Impact:** Clutters configuration, may confuse developers.
+
+  </Accordion>
+</AccordionGroup>
+
+### Score to Risk Level Mapping
+
+```typescript
+function scoreToRiskLevel(score: number): RiskLevel {
+    if (score >= 5) return 'critical';
+    if (score >= 4) return 'high';
+    if (score >= 3) return 'medium';
+    if (score >= 1) return 'low';
+    return 'info';
+}
+```
+
+---
+
+## Issue Types
+
+Envark detects nine specific issue types:
+
+<AccordionGroup>
+  <Accordion title="MISSING">
+    
+<ParamField query="severity" type="RiskLevel" default="critical">
+  Variable is used in code but not defined in any `.env` file
+</ParamField>
+
+**Detection:**
+```typescript
+if (variable.usedInCode && !variable.definedInEnvFile && !variable.hasDefault) {
+    issue = {
+        type: 'MISSING',
+        severity: 'critical',
+        message: `${variable.name} is used in code but not defined`,
+        recommendation: `Add ${variable.name} to your .env file`
+    };
+}
+```
+
+**Example:**
+```javascript
+// Used in code
+const key = process.env.STRIPE_API_KEY;
+
+// Not in .env or .env.example
+// Issue: MISSING (Critical)
+```
+
+  </Accordion>
+  
+  <Accordion title="UNDOCUMENTED">
+    
+<ParamField query="severity" type="RiskLevel" default="low">
+  Variable is not in `.env.example` and has no documentation
+</ParamField>
+
+**Detection:**
+```typescript
+if (!variable.isDocumented && variable.usedInCode) {
+    issue = {
+        type: 'UNDOCUMENTED',
+        severity: 'low',
+        message: `${variable.name} is not documented`,
+        recommendation: `Add to .env.example with a comment`
+    };
+}
+```
+
+  </Accordion>
+  
+  <Accordion title="DEAD">
+    
+<ParamField query="severity" type="RiskLevel" default="low">
+  Variable is defined but never used in code
+</ParamField>
+
+**Detection:**
+```typescript
+if (variable.definedInEnvFile && !variable.usedInCode) {
+    issue = {
+        type: 'DEAD',
+        severity: 'low',
+        message: `${variable.name} is defined but never used`,
+        recommendation: `Remove or verify it's needed`
+    };
+}
+```
+
+  </Accordion>
+  
+  <Accordion title="DUPLICATE">
+    
+<ParamField query="severity" type="RiskLevel" default="medium">
+  Variable has different values across multiple `.env` files
+</ParamField>
+
+**Detection:**
+```typescript
+const duplicates = findConflictingDefinitions(resolved);
+if (duplicates.length > 1) {
+    issue = {
+        type: 'DUPLICATE',
+        severity: 'medium',
+        message: `Different values across .env files`,
+        details: duplicates.map(d => `${d.file}: "${d.value}"`).join('\n')
+    };
+}
+```
+
+**Example:**
+```bash
+# .env
+PORT=3000
+
+# .env.local
+PORT=8080
+
+# Issue: DUPLICATE (Medium)
+```
+
+  </Accordion>
+  
+  <Accordion title="INCONSISTENT">
+    
+<ParamField query="severity" type="RiskLevel" default="medium">
+  Similar variable names that might be the same variable
+</ParamField>
+
+**Detection:**
+```typescript
+const similarGroups = findSimilarNames(resolved);
+for (const [, names] of similarGroups) {
+    if (names.includes(variable.name) && names.length > 1) {
+        issue = {
+            type: 'INCONSISTENT',
+            severity: 'medium',
+            message: `May be same as: ${others.join(', ')}`,
+            recommendation: `Standardize variable naming`
+        };
+    }
+}
+```
+
+**Example:**
+```javascript
+// File A
+process.env.DATABASE_URL
+
+// File B  
+process.env.DB_URL
+
+// Issue: INCONSISTENT (Medium)
+```
+
+  </Accordion>
+  
+  <Accordion title="NO_DEFAULT">
+    
+<ParamField query="severity" type="RiskLevel" default="medium">
+  Used in multiple places with no default value
+</ParamField>
+
+**Detection:**
+```typescript
+if (variable.usedInCode && 
+    !variable.hasDefault && 
+    variable.usages.length > 1) {
+    issue = {
+        type: 'NO_DEFAULT',
+        severity: 'medium',
+        message: `Used in ${variable.usages.length} places with no default`,
+        recommendation: `Add a default value or validate at startup`
+    };
+}
+```
+
+  </Accordion>
+  
+  <Accordion title="EXPOSED">
+    
+<ParamField query="severity" type="RiskLevel" default="high">
+  Secret-like variable in potentially committed `.env` file
+</ParamField>
+
+**Detection:**
+```typescript
+if (looksLikeSecret(variable.name) && 
+    variable.definedInEnvFile && 
+    !variable.definedInExample) {
+    const inCommittedFile = variable.definitions.some(d => {
+        const path = d.relativePath.toLowerCase();
+        return path === '.env' || path.endsWith('/.env');
+    });
+    
+    if (inCommittedFile) {
+        issue = {
+            type: 'EXPOSED',
+            severity: 'high',
+            message: `Looks like a secret in committed .env`,
+            recommendation: `Move to .env.local or add .env to .gitignore`
+        };
+    }
+}
+```
+
+  </Accordion>
+  
+  <Accordion title="EMPTY_VALUE">
+    
+<ParamField query="severity" type="RiskLevel" default="low">
+  Variable is defined with an empty value
+</ParamField>
+
+**Detection:**
+```typescript
+if (variable.defaultValues.some(v => v === '' || v === '""' || v === "''")) {
+    issue = {
+        type: 'EMPTY_VALUE',
+        severity: 'low',
+        message: `Defined with an empty value`,
+        recommendation: `Set an actual value or remove`
+    };
+}
+```
+
+  </Accordion>
+  
+  <Accordion title="PLACEHOLDER_VALUE">
+    
+<ParamField query="severity" type="RiskLevel" default="medium">
+  Variable has an obvious placeholder value
+</ParamField>
+
+**Placeholder Patterns:**
+```typescript
+const PLACEHOLDER_VALUES = [
+    'changeme',
+    'your-key-here',
+    'your_key_here',
+    'xxx',
+    'todo',
+    'fixme',
+    'replace-me',
+    'placeholder',
+    'example',
+    'test',
+    'development',
+    'your-',
+    '<', '>'
+];
+```
+
+**Detection:**
+```typescript
+if (variable.defaultValues.some(v => isPlaceholderValue(v))) {
+    issue = {
+        type: 'PLACEHOLDER_VALUE',
+        severity: 'medium',
+        message: `Has a placeholder value`,
+        recommendation: `Replace with actual configuration`
+    };
+}
+```
+
+**Example:**
+```bash
+API_KEY=your-key-here
+DATABASE_PASSWORD=changeme
+
+# Issues: PLACEHOLDER_VALUE (Medium)
+```
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Analysis Summary
+
+When you run `envark analyze`, you receive a comprehensive summary:
+
+```bash
+Environment Variable Risk Report
+========================================
+
+Total Variables: 24
+
+By Risk Level:
+  🔴 Critical: 2
+  🟠 High: 1
+  🟡 Medium: 5
+  🟢 Low: 8
+  ⚪ Info: 8
+
+By Issue Type:
+  MISSING: 2
+  EXPOSED: 1
+  NO_DEFAULT: 3
+  DUPLICATE: 2
+  UNDOCUMENTED: 5
+  DEAD: 3
+```
+
+### Summary Structure
+
+```typescript
+interface AnalysisResult {
+    variables: AnalyzedVariable[];
+    summary: {
+        totalVariables: number;
+        critical: number;
+        high: number;
+        medium: number;
+        low: number;
+        info: number;
+        byIssueType: Record<IssueType, number>;
+    };
+    duplicateGroups: Map<string, Array<{ file: string; value: string }>>;
+    similarNameGroups: Map<string, string[]>;
+}
+```
+
+---
+
+## Recommendations
+
+Envark generates actionable recommendations for each variable:
+
+<AccordionGroup>
+  <Accordion title="Issue-Based Recommendations">
+
+Each issue type includes a specific recommendation:
+
+```typescript
+const recommendations = issues.map(issue => issue.recommendation);
+```
+
+**Examples:**
+
+`Add DATABASE_URL to your .env file`
+
+`Move API_SECRET to .env.local or ensure .env is in .gitignore`
+
+`Ensure PORT has consistent values or document why they differ`
+
+`Add LOG_LEVEL to .env.example with a descriptive comment`
+
+  </Accordion>
+  
+  <Accordion title="General Recommendations">
+    
+For variables used extensively:
+
+```typescript
+if (variable.usedInCode && variable.usages.length > 3 && !variable.hasDefault) {
+    recommendations.push(
+        `Consider creating a config module that validates ${variable.name} at startup`
+    );
+}
+```
+
+For multi-language projects:
+
+```typescript
+if (variable.languages.length > 1) {
+    recommendations.push(
+        `${variable.name} is used across ${variable.languages.join(', ')} - ensure consistent handling`
+    );
+}
+```
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Filtering Analysis Results
+
+### By Risk Level
+
+```typescript
+import { filterByRisk } from 'envark';
+
+const result = await analyze(projectPath);
+
+// Only critical issues
+const criticalVars = filterByRisk(result, 'critical');
+
+// Medium and above
+const importantVars = filterByRisk(result, 'medium');
+```
+
+### By Issue Type
+
+```typescript
+import { filterByIssueType } from 'envark';
+
+// All missing variables
+const missing = filterByIssueType(result, 'MISSING');
+
+// All exposed secrets
+const exposed = filterByIssueType(result, 'EXPOSED');
+```
+
+---
+
+## CI/CD Integration
+
+<Warning>
+  Configure Envark to fail CI builds when critical or high-risk issues are detected.
+</Warning>
+
+```yaml
+# .github/workflows/envark.yml
+name: Environment Variable Analysis
+
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm install -g envark
+      
+      # Fail if critical issues found
+      - run: envark analyze --fail-on critical
+      
+      # Or fail on high and above
+      - run: envark analyze --fail-on high
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Best Practices" icon="circle-check" href="/guides/best-practices">
+    Learn how to prevent and fix common issues
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/commands">
+    Explore all analysis options and flags
+  </Card>
+</CardGroup>

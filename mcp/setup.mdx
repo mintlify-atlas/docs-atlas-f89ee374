@@ -1,0 +1,462 @@
+---
+title: MCP Setup Guide
+description: Step-by-step instructions to configure Envark as an MCP server in your IDE
+---
+
+## Automatic Setup
+
+The fastest way to set up Envark is using the built-in initialization command:
+
+```bash
+# Choose your IDE
+npx envark init vscode    # VS Code
+npx envark init claude    # Claude Desktop
+npx envark init cursor    # Cursor
+npx envark init windsurf  # Windsurf
+```
+
+This will:
+- Create the appropriate configuration directory
+- Generate the correct MCP configuration
+- Display instructions for the next steps
+
+<Warning>
+  If a configuration file already exists, Envark will print the configuration to add manually rather than overwriting your existing setup.
+</Warning>
+
+## Manual Configuration
+
+If you prefer to configure manually or need to add Envark to an existing MCP setup, follow the instructions for your IDE:
+
+<Tabs>
+  <Tab title="VS Code">
+    ### VS Code with GitHub Copilot
+
+    <Steps>
+      <Step title="Create MCP configuration">
+        Create or edit `.vscode/mcp.json` in your project root:
+
+        ```json .vscode/mcp.json
+        {
+          "servers": {
+            "envark": {
+              "type": "stdio",
+              "command": "npx",
+              "args": ["envark"]
+            }
+          }
+        }
+        ```
+
+        <Note>
+          VS Code uses a project-local configuration (`.vscode/mcp.json`) rather than a global one.
+        </Note>
+      </Step>
+
+      <Step title="Install Envark globally (optional)">
+        For faster startup, install Envark globally:
+
+        ```bash
+        npm install -g envark
+        ```
+
+        Then update your configuration:
+
+        ```json .vscode/mcp.json
+        {
+          "servers": {
+            "envark": {
+              "type": "stdio",
+              "command": "envark"
+            }
+          }
+        }
+        ```
+      </Step>
+
+      <Step title="Reload VS Code">
+        Press `Cmd/Ctrl + Shift + P` and run:
+
+        ```
+        Developer: Reload Window
+        ```
+      </Step>
+
+      <Step title="Verify integration">
+        Open Copilot Chat and ask:
+
+        > "Can you scan my project for environment variables?"
+
+        If configured correctly, Copilot will use the `get_env_map` tool.
+      </Step>
+    </Steps>
+
+    ### Troubleshooting VS Code
+
+    <AccordionGroup>
+      <Accordion title="Copilot doesn't see Envark tools">
+        - Check that `.vscode/mcp.json` exists in your project root
+        - Verify the file has valid JSON syntax
+        - Restart VS Code completely (close all windows)
+        - Check VS Code's Output panel for MCP errors
+      </Accordion>
+
+      <Accordion title="Command not found error">
+        If using `npx envark`, ensure Node.js and npm are in your PATH:
+
+        ```bash
+        which npx
+        node --version
+        ```
+
+        If using global install, verify:
+
+        ```bash
+        which envark
+        envark --version
+        ```
+      </Accordion>
+
+      <Accordion title="Slow first run">
+        The first time Envark runs via `npx`, it downloads the package. Subsequent runs use the cached version.
+
+        For faster startup, install globally:
+
+        ```bash
+        npm install -g envark
+        ```
+      </Accordion>
+    </AccordionGroup>
+  </Tab>
+
+  <Tab title="Claude Desktop">
+    ### Claude Desktop (Claude Code)
+
+    <Steps>
+      <Step title="Locate Claude config directory">
+        The config file location depends on your OS:
+
+        - **macOS**: `~/.claude/mcp.json`
+        - **Linux**: `~/.claude/mcp.json`
+        - **Windows**: `%APPDATA%\Claude\mcp.json`
+      </Step>
+
+      <Step title="Create or edit mcp.json">
+        ```json ~/.claude/mcp.json
+        {
+          "mcpServers": {
+            "envark": {
+              "command": "npx",
+              "args": ["envark"]
+            }
+          }
+        }
+        ```
+
+        <Note>
+          If you have other MCP servers configured, add Envark to the existing `mcpServers` object.
+        </Note>
+      </Step>
+
+      <Step title="Restart Claude Desktop">
+        Completely quit and restart Claude Desktop to load the new configuration.
+      </Step>
+
+      <Step title="Test the integration">
+        In a new conversation, ask:
+
+        > "Please scan my current project for environment variables"
+
+        Claude should respond using Envark's tools.
+      </Step>
+    </Steps>
+
+    ### Using with -y flag
+
+    To avoid npx confirmation prompts, use the `-y` flag:
+
+    ```json ~/.claude/mcp.json
+    {
+      "mcpServers": {
+        "envark": {
+          "command": "npx",
+          "args": ["-y", "envark"]
+        }
+      }
+    }
+    ```
+
+    ### Troubleshooting Claude
+
+    <AccordionGroup>
+      <Accordion title="Claude doesn't see the tools">
+        - Verify the config file path is correct for your OS
+        - Check JSON syntax with a validator
+        - Ensure Claude Desktop is completely restarted
+        - Check Claude's developer console (if available) for errors
+      </Accordion>
+
+      <Accordion title="Permission denied errors">
+        On macOS/Linux, ensure the config directory has correct permissions:
+
+        ```bash
+        chmod 700 ~/.claude
+        chmod 600 ~/.claude/mcp.json
+        ```
+      </Accordion>
+    </AccordionGroup>
+  </Tab>
+
+  <Tab title="Cursor">
+    ### Cursor Editor
+
+    <Steps>
+      <Step title="Locate Cursor config directory">
+        - **macOS**: `~/.cursor/mcp.json`
+        - **Linux**: `~/.cursor/mcp.json`
+        - **Windows**: `%APPDATA%\Cursor\mcp.json`
+      </Step>
+
+      <Step title="Create or edit mcp.json">
+        ```json ~/.cursor/mcp.json
+        {
+          "mcpServers": {
+            "envark": {
+              "command": "npx",
+              "args": ["envark"]
+            }
+          }
+        }
+        ```
+      </Step>
+
+      <Step title="Restart Cursor">
+        Close all Cursor windows and reopen the editor.
+      </Step>
+
+      <Step title="Verify in Cursor Chat">
+        Open Cursor Chat (Cmd/Ctrl + L) and ask:
+
+        > "Scan my project for environment variables"
+
+        The AI should use Envark's MCP tools to respond.
+      </Step>
+    </Steps>
+
+    ### Global Install for Cursor
+
+    For better performance, install Envark globally:
+
+    ```bash
+    npm install -g envark
+    ```
+
+    Update configuration:
+
+    ```json ~/.cursor/mcp.json
+    {
+      "mcpServers": {
+        "envark": {
+          "command": "envark"
+        }
+      }
+    }
+    ```
+
+    ### Troubleshooting Cursor
+
+    <AccordionGroup>
+      <Accordion title="Tools not available in chat">
+        - Confirm `~/.cursor/mcp.json` exists and is valid JSON
+        - Restart Cursor completely
+        - Check that Node.js is installed and in PATH
+        - Try running `npx envark help` in terminal to verify installation
+      </Accordion>
+
+      <Accordion title="Cursor hangs when calling tools">
+        This may indicate Envark is scanning a very large project. Check:
+
+        - Is your `.gitignore` properly configured?
+        - Are `node_modules` or other large directories excluded?
+        - Try running `npx envark scan` in terminal to see scan time
+      </Accordion>
+    </AccordionGroup>
+  </Tab>
+
+  <Tab title="Windsurf">
+    ### Windsurf IDE
+
+    <Steps>
+      <Step title="Locate Windsurf config directory">
+        - **macOS**: `~/.windsurf/mcp.json`
+        - **Linux**: `~/.windsurf/mcp.json`
+        - **Windows**: `%APPDATA%\Windsurf\mcp.json`
+      </Step>
+
+      <Step title="Create or edit mcp.json">
+        ```json ~/.windsurf/mcp.json
+        {
+          "mcpServers": {
+            "envark": {
+              "command": "npx",
+              "args": ["envark"]
+            }
+          }
+        }
+        ```
+      </Step>
+
+      <Step title="Restart Windsurf">
+        Completely quit and relaunch Windsurf.
+      </Step>
+
+      <Step title="Test integration">
+        In Windsurf's AI chat, ask:
+
+        > "What environment variables are missing in my project?"
+
+        The AI should use `get_missing_envs` to answer.
+      </Step>
+    </Steps>
+
+    ### Troubleshooting Windsurf
+
+    <AccordionGroup>
+      <Accordion title="MCP server not loading">
+        - Verify config file location for your operating system
+        - Check that the JSON is valid (use `jsonlint` or similar)
+        - Ensure Windsurf has permission to execute `npx`
+        - Try running Windsurf from terminal to see error messages
+      </Accordion>
+    </AccordionGroup>
+  </Tab>
+</Tabs>
+
+## Advanced Configuration
+
+### Using a Specific Node Version
+
+If you use a Node version manager (nvm, fnm, etc.), specify the full path:
+
+```json
+{
+  "mcpServers": {
+    "envark": {
+      "command": "/Users/yourname/.nvm/versions/node/v20.10.0/bin/npx",
+      "args": ["envark"]
+    }
+  }
+}
+```
+
+### Setting a Working Directory
+
+Some IDEs support setting a working directory for MCP servers:
+
+```json
+{
+  "mcpServers": {
+    "envark": {
+      "command": "npx",
+      "args": ["envark"],
+      "cwd": "/path/to/your/project"
+    }
+  }
+}
+```
+
+### Environment Variables
+
+You can pass environment variables to Envark:
+
+```json
+{
+  "mcpServers": {
+    "envark": {
+      "command": "npx",
+      "args": ["envark"],
+      "env": {
+        "DEBUG": "true"
+      }
+    }
+  }
+}
+```
+
+## Verifying Your Setup
+
+After configuration, verify Envark is working:
+
+### Test via AI Assistant
+
+Ask your AI assistant:
+
+> "Can you list the available MCP tools?"
+
+You should see Envark's 9 tools listed.
+
+### Test via Terminal
+
+Run Envark directly to ensure it works:
+
+```bash
+npx envark scan
+```
+
+You should see a list of environment variables from your project.
+
+### Check MCP Logs
+
+Most IDEs log MCP server activity. Check:
+
+- **VS Code**: Output panel → "MCP" or "Language Server"
+- **Claude Desktop**: Help → Developer Console
+- **Cursor**: View → Output → "MCP"
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Error: Cannot find module 'envark'">
+    This means npx couldn't download or find Envark. Solutions:
+
+    1. Install globally: `npm install -g envark`
+    2. Clear npm cache: `npm cache clean --force`
+    3. Use full npx path: `/usr/local/bin/npx envark`
+  </Accordion>
+
+  <Accordion title="MCP server times out">
+    Envark might be scanning a very large project:
+
+    1. Check that `.gitignore` excludes `node_modules`, `.git`, etc.
+    2. Run `npx envark scan` manually to see scan time
+    3. Increase timeout in IDE settings (if available)
+  </Accordion>
+
+  <Accordion title="Tools return empty results">
+    This usually means Envark is running in the wrong directory:
+
+    1. Verify your IDE opened the correct project folder
+    2. Check the `cwd` setting in MCP config
+    3. Run `npx envark scan` in your project directory to verify results
+  </Accordion>
+
+  <Accordion title="Permission denied on macOS/Linux">
+    Fix file permissions:
+
+    ```bash
+    chmod +x $(which npx)
+    chmod 644 ~/.claude/mcp.json  # or ~/.cursor/mcp.json, etc.
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Tool Reference" icon="wrench" href="/mcp/tools">
+    Learn about all available MCP tools and their parameters
+  </Card>
+  <Card title="Usage Examples" icon="code" href="/features/ai-assistant">
+    See real-world examples of using Envark with AI assistants
+  </Card>
+</CardGroup>

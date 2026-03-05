@@ -1,0 +1,631 @@
+---
+title: Supported Languages
+description: Complete reference of all programming languages and environments supported by Envark
+---
+
+Envark automatically detects and parses environment variable usage across 8 different programming languages and configuration formats. This page documents the exact patterns used to detect environment variables in each language.
+
+## Overview
+
+Envark uses language-specific regex patterns to identify how environment variables are accessed, defined, and used across your codebase.
+
+| Language | File Extensions | Pattern Detection |
+|----------|----------------|-------------------|
+| JavaScript/TypeScript | `.js`, `.jsx`, `.ts`, `.tsx`, `.mjs`, `.cjs` | `process.env`, `import.meta.env` |
+| Python | `.py` | `os.environ`, `os.getenv()` |
+| Go | `.go` | `os.Getenv()`, `os.LookupEnv()` |
+| Rust | `.rs` | `env::var()`, `env::var_os()` |
+| Shell | `.sh`, `.bash`, `.zsh` | `$VAR`, `${VAR}`, `export VAR` |
+| Dockerfile | `Dockerfile`, `*.dockerfile` | `ENV`, `ARG` |
+| YAML | `.yml`, `.yaml` (docker-compose) | `environment:`, `${VAR}` |
+| .env files | `.env*` | `KEY=value` format |
+
+---
+
+## JavaScript & TypeScript
+
+<AccordionGroup>
+  <Accordion title="Supported Patterns">
+    
+### Standard Patterns
+
+Envark detects the following JavaScript/TypeScript patterns:
+
+```javascript
+// process.env.VARIABLE_NAME
+const apiKey = process.env.API_KEY;
+
+// process.env['VARIABLE_NAME']
+const token = process.env['AUTH_TOKEN'];
+const secret = process.env["SECRET_KEY"];
+
+// import.meta.env.VARIABLE_NAME (Vite)
+const url = import.meta.env.VITE_API_URL;
+
+// import.meta.env['VARIABLE_NAME']
+const key = import.meta.env['VITE_PUBLIC_KEY'];
+```
+
+### Default Values
+
+Envark recognizes default value patterns:
+
+```javascript
+// Using || operator
+const port = process.env.PORT || '3000';
+
+// Using ?? operator (nullish coalescing)
+const timeout = process.env.TIMEOUT ?? 5000;
+```
+
+### Destructuring
+
+Destructuring from `process.env` is fully supported:
+
+```javascript
+const { API_KEY, DATABASE_URL, PORT } = process.env;
+```
+
+  </Accordion>
+  
+  <Accordion title="Detection Regex Patterns">
+    
+### Actual Implementation Patterns
+
+These are the exact regex patterns used by Envark:
+
+```regex
+// Pattern 1: process.env.VARIABLE_NAME
+/process\.env\.([A-Z][A-Z0-9_]*)/g
+
+// Pattern 2: process.env['VARIABLE_NAME'] or process.env["VARIABLE_NAME"]
+/process\.env\[['"](([A-Z][A-Z0-9_]*)['"]]\]/g
+
+// Pattern 3: import.meta.env.VARIABLE_NAME
+/import\.meta\.env\.([A-Z][A-Z0-9_]*)/g
+
+// Pattern 4: import.meta.env['VARIABLE_NAME']
+/import\.meta\.env\[['"](([A-Z][A-Z0-9_]*)['"]]\]/g
+
+// Pattern 5: Destructuring
+/const\s*\{([^}]+)\}\s*=\s*process\.env/g
+
+// Pattern 6: Default value detection
+/^\s*(?:\|\||\?\?)\s*['"](([^'",;\s)]+)['"]/?
+```
+
+  </Accordion>
+  
+  <Accordion title="Usage Type Detection">
+    
+<ParamField query="usageType" type="string" default="usage">
+  Envark classifies each detection into usage types:
+  
+  - **`usage`** - Standard environment variable access
+  - **`default_provided`** - Variable with fallback value (using `||` or `??`)
+  
+  Example:
+  ```javascript
+  process.env.API_KEY          // usageType: 'usage'
+  process.env.PORT || '3000'   // usageType: 'default_provided'
+  ```
+</ParamField>
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Python
+
+<AccordionGroup>
+  <Accordion title="Supported Patterns">
+    
+### os.environ Dictionary Access
+
+```python
+import os
+
+# Direct access
+api_key = os.environ['API_KEY']
+secret = os.environ["DATABASE_PASSWORD"]
+```
+
+### os.environ.get() Method
+
+```python
+# Without default
+token = os.environ.get('AUTH_TOKEN')
+
+# With default value
+port = os.environ.get('PORT', '8000')
+debug = os.environ.get('DEBUG', 'false')
+```
+
+### os.getenv() Function
+
+```python
+# Without default
+host = os.getenv('DATABASE_HOST')
+
+# With default value
+url = os.getenv('API_URL', 'http://localhost')
+```
+
+  </Accordion>
+  
+  <Accordion title="Detection Regex Patterns">
+    
+```regex
+// Pattern 1: os.environ['VAR'] or os.environ["VAR"]
+/os\.environ\[['"](([A-Z][A-Z0-9_]*)['"]]\]/g
+
+// Pattern 2: os.environ.get('VAR') or os.environ.get('VAR', 'default')
+/os\.environ\.get\(\s*['"](([A-Z][A-Z0-9_]*)['"]((?:\s*,\s*['"](([^'")\s]+)['"]()?)?\)/g
+
+// Pattern 3: os.getenv('VAR') or os.getenv('VAR', 'default')
+/os\.getenv\(\s*['"](([A-Z][A-Z0-9_]*)['"]((?:\s*,\s*['"](([^'")\s]+)['"]()?)?\)/g
+```
+
+  </Accordion>
+  
+  <Accordion title="Usage Type Detection">
+    
+```python
+# usageType: 'usage'
+os.environ['DATABASE_URL']
+os.getenv('API_KEY')
+
+# usageType: 'default_provided'
+os.environ.get('PORT', '5000')
+os.getenv('ENVIRONMENT', 'development')
+```
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Go
+
+<AccordionGroup>
+  <Accordion title="Supported Patterns">
+    
+### os.Getenv()
+
+```go
+import "os"
+
+func main() {
+    apiKey := os.Getenv("API_KEY")
+    port := os.Getenv("PORT")
+}
+```
+
+### os.LookupEnv()
+
+```go
+import "os"
+
+func main() {
+    // Returns (value, exists)
+    dbUrl, exists := os.LookupEnv("DATABASE_URL")
+    if !exists {
+        panic("DATABASE_URL not set")
+    }
+}
+```
+
+  </Accordion>
+  
+  <Accordion title="Detection Regex Patterns">
+    
+```regex
+// Pattern 1: os.Getenv("VAR")
+/os\.Getenv\(\s*"([A-Z][A-Z0-9_]*)"\s*\)/g
+
+// Pattern 2: os.LookupEnv("VAR")
+/os\.LookupEnv\(\s*"([A-Z][A-Z0-9_]*)"\s*\)/g
+```
+
+  </Accordion>
+  
+  <Accordion title="Usage Type Detection">
+    
+<ParamField query="usageType" type="string">
+  - **`usage`** - Standard `os.Getenv()` call
+  - **`required_check`** - Using `os.LookupEnv()` which returns existence boolean
+  
+  ```go
+  os.Getenv("API_KEY")              // usageType: 'usage'
+  os.LookupEnv("DATABASE_URL")      // usageType: 'required_check'
+  ```
+</ParamField>
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Rust
+
+<AccordionGroup>
+  <Accordion title="Supported Patterns">
+    
+### env::var()
+
+```rust
+use std::env;
+
+fn main() {
+    // Returns Result<String, VarError>
+    let api_key = env::var("API_KEY").unwrap();
+    
+    // With default
+    let port = env::var("PORT").unwrap_or(String::from("3000"));
+    
+    // With default from Default trait
+    let host = env::var("HOST").unwrap_or_default();
+}
+```
+
+### env::var_os()
+
+```rust
+use std::env;
+
+fn main() {
+    // Returns Option<OsString>
+    let path = env::var_os("PATH");
+}
+```
+
+  </Accordion>
+  
+  <Accordion title="Detection Regex Patterns">
+    
+```regex
+// Pattern 1: env::var("VAR") or std::env::var("VAR")
+/(?:std::)?env::var\(\s*"([A-Z][A-Z0-9_]*)"\s*\)/g
+
+// Pattern 2: env::var_os("VAR")
+/(?:std::)?env::var_os\(\s*"([A-Z][A-Z0-9_]*)"\s*\)/g
+
+// Pattern 3: Default handler detection
+/\.(unwrap_or|unwrap_or_default|ok)\s*\(/
+```
+
+  </Accordion>
+  
+  <Accordion title="Usage Type Detection">
+    
+```rust
+// usageType: 'usage'
+env::var("API_KEY").unwrap()
+
+// usageType: 'default_provided'
+env::var("PORT").unwrap_or(String::from("8080"))
+env::var("DEBUG").unwrap_or_default()
+env::var("CONFIG").ok()
+```
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Shell Scripts
+
+<AccordionGroup>
+  <Accordion title="Supported Patterns">
+    
+### Variable Definitions
+
+```bash
+# Simple assignment
+API_KEY=my-secret-key
+
+# With export
+export DATABASE_URL=postgres://localhost/db
+
+# With quotes
+export PORT="3000"
+```
+
+### Variable Usage
+
+```bash
+# Simple reference
+echo $PORT
+
+# Braced reference
+echo ${DATABASE_URL}
+
+# With default value
+echo ${PORT:-3000}
+```
+
+  </Accordion>
+  
+  <Accordion title="Detection Regex Patterns">
+    
+```regex
+// Pattern 1: export VAR=value or VAR=value
+/^(?:export\s+)?([A-Z][A-Z0-9_]*)=/
+
+// Pattern 2: ${VAR}
+/\$\{([A-Z][A-Z0-9_]*)\}/g
+
+// Pattern 3: $VAR
+/\$([A-Z][A-Z0-9_]*)\b/g
+
+// Pattern 4: Default syntax ${VAR:-default}
+/\$\{[A-Z][A-Z0-9_]*:-([^}]*)\}/
+```
+
+  </Accordion>
+  
+  <Accordion title="Usage Type Detection">
+    
+<ParamField query="usageType" type="string">
+  - **`definition`** - Variable assignment or export
+  - **`usage`** - Variable reference
+  - **`default_provided`** - Using `${VAR:-default}` syntax
+</ParamField>
+
+```bash
+export PORT=3000                # usageType: 'definition'
+echo $PORT                      # usageType: 'usage'
+echo ${PORT:-3000}              # usageType: 'default_provided'
+```
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Dockerfile
+
+<AccordionGroup>
+  <Accordion title="Supported Patterns">
+    
+### ENV Instruction
+
+```dockerfile
+# ENV VAR=value
+ENV NODE_ENV=production
+ENV PORT=8080
+
+# ENV VAR value
+ENV API_URL http://api.example.com
+```
+
+### ARG Instruction
+
+```dockerfile
+# ARG without default
+ARG BUILD_VERSION
+
+# ARG with default
+ARG NODE_VERSION=18
+ARG ENVIRONMENT=development
+```
+
+  </Accordion>
+  
+  <Accordion title="Detection Regex Patterns">
+    
+```regex
+// Pattern 1: ENV VAR=value or ENV VAR value
+/^ENV\s+([A-Z][A-Z0-9_]*)(?:=|\s+)(.*)$/i
+
+// Pattern 2: ARG VAR or ARG VAR=default
+/^ARG\s+([A-Z][A-Z0-9_]*)(?:=(.*))?$/i
+```
+
+  </Accordion>
+  
+  <Accordion title="Usage Type Detection">
+    
+```dockerfile
+ENV DATABASE_URL=postgres://db   # usageType: 'definition'
+ARG BUILD_DATE                   # usageType: 'usage'
+ARG PORT=3000                    # usageType: 'default_provided'
+```
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## YAML (Docker Compose)
+
+<AccordionGroup>
+  <Accordion title="Supported Patterns">
+    
+Envark parses YAML files that contain `docker-compose` in the filename.
+
+### Environment Section
+
+```yaml
+services:
+  web:
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL
+      - API_KEY=${API_KEY}
+```
+
+### Variable Interpolation
+
+```yaml
+services:
+  app:
+    image: myapp:${VERSION}
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - DATABASE_URL=${DB_URL}
+```
+
+  </Accordion>
+  
+  <Accordion title="Detection Regex Patterns">
+    
+```regex
+// Pattern 1: Detect environment section
+/^(\s*)environment:/
+
+// Pattern 2: - VAR=value or - VAR
+/^-\s*([A-Z][A-Z0-9_]*)(?:=(.*))?$/
+
+// Pattern 3: ${VAR} or ${VAR:-default}
+/\$\{([A-Z][A-Z0-9_]*)(?::-(([^}]*))?\}/g
+```
+
+  </Accordion>
+  
+  <Accordion title="Usage Type Detection">
+    
+```yaml
+environment:
+  - NODE_ENV=production        # usageType: 'definition'
+  - DATABASE_URL               # usageType: 'usage'
+  - PORT=${PORT:-3000}        # usageType: 'default_provided'
+```
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## .env Files
+
+<AccordionGroup>
+  <Accordion title="Supported Patterns">
+    
+### Standard Format
+
+```bash
+# Comment describing the variable
+API_KEY=abc123
+
+# Double quotes
+DATABASE_URL="postgres://localhost/mydb"
+
+# Single quotes
+SECRET_KEY='my-secret'
+
+# With export (compatible with shell sourcing)
+export PORT=3000
+```
+
+### Documentation Comments
+
+Envark captures comments immediately preceding variable definitions:
+
+```bash
+# The API key for external service authentication
+API_KEY=abc123
+```
+
+  </Accordion>
+  
+  <Accordion title="Detection Regex Patterns">
+    
+```regex
+// Pattern 1: Comment lines
+/^#/
+
+// Pattern 2: KEY=VALUE, KEY="VALUE", export KEY=VALUE
+/^(?:export\s+)?([A-Z][A-Z0-9_]*)=(.*)$/
+```
+
+  </Accordion>
+  
+  <Accordion title="Usage Type Detection">
+    
+All variables in `.env` files are classified as:
+- **`usageType: 'definition'`**
+- **`hasDefaultValue: true`**
+
+Additionally, Envark captures preceding comments as documentation:
+
+```bash
+# Database connection string
+DATABASE_URL=postgres://localhost/db
+```
+
+The comment "Database connection string" is stored in the `documentation` field.
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Variable Naming Rules
+
+<Note>
+  Envark validates environment variable names to avoid false positives.
+</Note>
+
+### Valid Variable Names
+
+Envark considers a variable name valid if it matches one of these patterns:
+
+```regex
+// Pattern 1: Uppercase with underscores (traditional)
+/^[A-Z][A-Z0-9_]*$/
+
+// Pattern 2: Lowercase/camelCase (for some frameworks)
+/^[a-z][a-zA-Z0-9_]*$/
+```
+
+### Examples
+
+```javascript
+// ✅ Valid - detected
+process.env.DATABASE_URL
+process.env.API_KEY
+process.env.NODE_ENV
+process.env.MY_VAR_123
+
+// ❌ Invalid - ignored
+process.env.123_START_WITH_NUMBER
+process.env.lowercase_only
+process.env['dynamic' + suffix]  // Dynamic access
+```
+
+---
+
+## Context Extraction
+
+<Info>
+  For each detected environment variable, Envark extracts surrounding code context (±2 lines) to help you understand usage.
+</Info>
+
+### Context Format
+
+```text
+  10: import express from 'express';
+  11: import dotenv from 'dotenv';
+> 12: const port = process.env.PORT || 3000;
+  13: const app = express();
+  14: app.listen(port);
+```
+
+The `>` symbol indicates the line where the environment variable was detected.
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Risk Scoring" icon="shield-halved" href="/guides/risk-scoring">
+    Learn how Envark analyzes and scores environment variable risks
+  </Card>
+  <Card title="Best Practices" icon="circle-check" href="/guides/best-practices">
+    Follow recommended patterns for managing environment variables
+  </Card>
+</CardGroup>

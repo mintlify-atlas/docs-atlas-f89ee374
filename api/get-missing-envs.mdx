@@ -1,0 +1,173 @@
+---
+title: "get_missing_envs"
+description: "Returns environment variables used in code that will cause runtime crashes"
+---
+
+## Overview
+
+The `get_missing_envs` tool identifies every environment variable that is used in code but has no definition anywhere and no default value. These variables will cause runtime crashes when the application tries to access them.
+
+## Parameters
+
+<ParamField path="projectPath" type="string" optional>
+  Path to the project directory. Defaults to current working directory.
+</ParamField>
+
+## Response
+
+<ResponseField name="missing" type="array" required>
+  Array of missing environment variables
+  
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">
+      Variable name
+    </ResponseField>
+    <ResponseField name="usages" type="array">
+      Array of usage locations (limited to first 10)
+      
+      <Expandable title="usage object">
+        <ResponseField name="file" type="string">
+          Relative path to the file
+        </ResponseField>
+        <ResponseField name="line" type="number">
+          Line number where the variable is used
+        </ResponseField>
+        <ResponseField name="context" type="string">
+          Code context showing how the variable is used
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="usageCount" type="number">
+      Total number of times this variable is used
+    </ResponseField>
+    <ResponseField name="languages" type="string[]">
+      Programming languages using this variable
+    </ResponseField>
+    <ResponseField name="dangerLevel" type="string">
+      Danger level: "critical" (used in 3+ places) or "high"
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="totalMissing" type="number" required>
+  Total number of missing variables
+</ResponseField>
+
+<ResponseField name="willCauseRuntimeCrash" type="number" required>
+  Number of variables that will definitely cause runtime crashes (critical danger level)
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  Scan metadata
+  
+  <Expandable title="properties">
+    <ResponseField name="projectPath" type="string">
+      Absolute path to the scanned project
+    </ResponseField>
+    <ResponseField name="scannedFiles" type="number">
+      Number of files scanned
+    </ResponseField>
+    <ResponseField name="cacheHit" type="boolean">
+      Whether the scan used cached results
+    </ResponseField>
+    <ResponseField name="duration" type="number">
+      Scan duration in milliseconds
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Response
+
+```json
+{
+  "missing": [
+    {
+      "name": "API_KEY",
+      "usages": [
+        {
+          "file": "src/api/client.ts",
+          "line": 12,
+          "context": "const apiKey = process.env.API_KEY;"
+        },
+        {
+          "file": "src/services/external-api.ts",
+          "line": 25,
+          "context": "headers: { 'X-API-Key': process.env.API_KEY }"
+        },
+        {
+          "file": "src/middleware/auth.ts",
+          "line": 8,
+          "context": "if (!process.env.API_KEY) throw new Error();"
+        }
+      ],
+      "usageCount": 8,
+      "languages": ["typescript"],
+      "dangerLevel": "critical"
+    },
+    {
+      "name": "WEBHOOK_SECRET",
+      "usages": [
+        {
+          "file": "src/webhooks/handler.ts",
+          "line": 45,
+          "context": "const secret = process.env.WEBHOOK_SECRET;"
+        }
+      ],
+      "usageCount": 2,
+      "languages": ["typescript"],
+      "dangerLevel": "high"
+    }
+  ],
+  "totalMissing": 2,
+  "willCauseRuntimeCrash": 1,
+  "metadata": {
+    "projectPath": "/Users/dev/my-project",
+    "scannedFiles": 156,
+    "cacheHit": false,
+    "duration": 198
+  }
+}
+```
+
+## Usage Example
+
+AI assistants can call this tool to identify missing variables before deployment:
+
+```json
+{
+  "name": "get_missing_envs",
+  "arguments": {
+    "projectPath": "/path/to/project"
+  }
+}
+```
+
+Minimal call (uses current directory):
+
+```json
+{
+  "name": "get_missing_envs",
+  "arguments": {}
+}
+```
+
+## Use Cases
+
+- **Pre-Deployment Check**: Ensure all required variables are defined before deploying
+- **Onboarding**: Help new developers set up their environment correctly
+- **CI/CD**: Validate environment configuration in continuous integration
+- **Crash Prevention**: Identify variables that will cause runtime failures
+- **Environment Migration**: Ensure all variables are migrated when moving between environments
+
+## Error Prevention
+
+Variables reported by this tool will cause one of these errors at runtime:
+
+- `TypeError: Cannot read property 'X' of undefined`
+- `ReferenceError: VARIABLE_NAME is not defined`
+- Application crashes when accessing undefined environment variables
+- Silent failures if code doesn't validate environment variables
+
+The `dangerLevel` field indicates severity:
+- **critical**: Used in 3+ locations, will likely crash multiple parts of the application
+- **high**: Used in 1-2 locations, will crash specific functionality

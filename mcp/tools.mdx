@@ -1,0 +1,804 @@
+---
+title: MCP Tool Reference
+description: Complete documentation of all MCP tools exposed by Envark
+---
+
+Envark exposes 9 MCP tools that AI assistants can use to analyze and manage environment variables. Each tool returns structured JSON data that the AI formats for human consumption.
+
+## Tool Index
+
+<CardGroup cols={3}>
+  <Card title="get_env_map" icon="map" href="#get-env-map">
+    Complete variable inventory
+  </Card>
+  <Card title="get_env_risk" icon="triangle-exclamation" href="#get-env-risk">
+    Risk analysis
+  </Card>
+  <Card title="get_missing_envs" icon="circle-xmark" href="#get-missing-envs">
+    Missing variables
+  </Card>
+  <Card title="get_duplicates" icon="copy" href="#get-duplicates">
+    Duplicate finder
+  </Card>
+  <Card title="get_undocumented" icon="file-slash" href="#get-undocumented">
+    Undocumented variables
+  </Card>
+  <Card title="get_env_usage" icon="magnifying-glass-chart" href="#get-env-usage">
+    Variable deep dive
+  </Card>
+  <Card title="get_env_graph" icon="diagram-project" href="#get-env-graph">
+    Dependency graph
+  </Card>
+  <Card title="validate_env_file" icon="check" href="#validate-env-file">
+    File validation
+  </Card>
+  <Card title="generate_env_template" icon="file-code" href="#generate-env-template">
+    Template generation
+  </Card>
+</CardGroup>
+
+---
+
+## get_env_map
+
+Returns the complete environment variable map for the project, with optional filtering.
+
+### Input Schema
+
+```json
+{
+  "projectPath": "string (optional)",
+  "filter": "all | missing | unused | risky | undocumented (optional)"
+}
+```
+
+**Parameters:**
+
+- `projectPath` — Path to project directory. Defaults to current working directory.
+- `filter` — Filter variables by status:
+  - `all` (default) — All variables
+  - `missing` — Used in code but not defined
+  - `unused` — Defined but never used
+  - `risky` — Critical or high risk level
+  - `undocumented` — Not in `.env.example`
+
+### Output Schema
+
+```json
+{
+  "summary": {
+    "totalEnvVars": 24,
+    "defined": 20,
+    "used": 22,
+    "missing": 3,
+    "undocumented": 5,
+    "dead": 2,
+    "critical": 1
+  },
+  "variables": [
+    {
+      "name": "DATABASE_URL",
+      "definedIn": [".env", ".env.local"],
+      "usedIn": ["src/db.ts", "src/migrations/run.ts"],
+      "languages": ["typescript"],
+      "hasDefault": false,
+      "isDocumented": true,
+      "riskLevel": "medium",
+      "issueCount": 1
+    }
+  ],
+  "metadata": {
+    "projectPath": "/path/to/project",
+    "scannedFiles": 127,
+    "cacheHit": false,
+    "duration": 1834
+  }
+}
+```
+
+### Example Usage
+
+Ask your AI:
+
+> "Show me all environment variables in my project"
+
+> "What variables are missing?"
+
+> "Which variables are defined but never used?"
+
+---
+
+## get_env_risk
+
+Returns environment variables sorted by risk level with detailed issue explanations.
+
+### Input Schema
+
+```json
+{
+  "projectPath": "string (optional)",
+  "minRisk": "info | low | medium | high | critical (optional)"
+}
+```
+
+**Parameters:**
+
+- `projectPath` — Path to project directory. Defaults to current working directory.
+- `minRisk` — Minimum risk level to include. Defaults to `info` (shows all).
+
+### Output Schema
+
+```json
+{
+  "summary": {
+    "critical": 2,
+    "high": 1,
+    "medium": 5,
+    "low": 8,
+    "info": 10
+  },
+  "riskReport": [
+    {
+      "name": "STRIPE_SECRET_KEY",
+      "riskLevel": "critical",
+      "issues": [
+        {
+          "type": "MISSING",
+          "severity": "critical",
+          "message": "Used in code but never defined",
+          "recommendation": "Add STRIPE_SECRET_KEY to your .env file"
+        }
+      ],
+      "usageCount": 3,
+      "files": ["src/payments/stripe.ts", "src/api/checkout.ts"]
+    }
+  ],
+  "metadata": {
+    "projectPath": "/path/to/project",
+    "scannedFiles": 127,
+    "cacheHit": true,
+    "duration": 245
+  }
+}
+```
+
+### Risk Levels
+
+| Level | Description |
+|-------|-------------|
+| **critical** | Used but never defined, no default. Will cause runtime crashes. |
+| **high** | Secret-like names in committed files, or multiple usages with no default |
+| **medium** | Used without definition but has default value |
+| **low** | Undocumented or minor issues |
+| **info** | Fully configured, no issues |
+
+### Example Usage
+
+> "Are there any critical environment variable issues?"
+
+> "Show me variables with high security risk"
+
+> "What are the most dangerous variables in my project?"
+
+---
+
+## get_missing_envs
+
+Returns environment variables used in code but never defined anywhere, with no default value. These **will cause runtime crashes**.
+
+### Input Schema
+
+```json
+{
+  "projectPath": "string (optional)"
+}
+```
+
+### Output Schema
+
+```json
+{
+  "missing": [
+    {
+      "name": "API_SECRET",
+      "usages": [
+        {
+          "file": "src/api/auth.ts",
+          "line": 42,
+          "context": "const secret = process.env.API_SECRET;"
+        }
+      ],
+      "usageCount": 3,
+      "languages": ["typescript"],
+      "dangerLevel": "critical"
+    }
+  ],
+  "totalMissing": 3,
+  "willCauseRuntimeCrash": 2,
+  "metadata": {
+    "projectPath": "/path/to/project",
+    "scannedFiles": 127,
+    "cacheHit": false,
+    "duration": 1523
+  }
+}
+```
+
+### Danger Levels
+
+- **critical** — Used in 3+ places. Guaranteed production crash.
+- **high** — Used in 1-2 places. Will crash when that code path executes.
+
+### Example Usage
+
+> "What environment variables am I missing?"
+
+> "Will my app crash due to missing env vars?"
+
+> "Show me undefined environment variables"
+
+---
+
+## get_duplicates
+
+Finds environment variables with conflicting definitions across multiple `.env` files, and similar variable names that might represent the same concept.
+
+### Input Schema
+
+```json
+{
+  "projectPath": "string (optional)"
+}
+```
+
+### Output Schema
+
+```json
+{
+  "duplicates": [
+    {
+      "variableName": "DATABASE_URL",
+      "type": "value_conflict",
+      "values": [
+        {
+          "file": ".env",
+          "value": "postgresql://localhost/dev"
+        },
+        {
+          "file": ".env.production",
+          "value": "postgresql://prod-server/db"
+        }
+      ],
+      "recommendation": "Consolidate DATABASE_URL to have the same value across all .env files, or use environment-specific values intentionally."
+    },
+    {
+      "variableName": "DB_URL",
+      "type": "similar_name",
+      "similarNames": ["DB_URL", "DATABASE_URL", "DB_CONNECTION_STRING"],
+      "recommendation": "Consider standardizing these variable names: DB_URL, DATABASE_URL, DB_CONNECTION_STRING. They may represent the same concept."
+    }
+  ],
+  "valueConflicts": 1,
+  "similarNameGroups": 1,
+  "metadata": {
+    "projectPath": "/path/to/project",
+    "scannedFiles": 127,
+    "cacheHit": true,
+    "duration": 892
+  }
+}
+```
+
+### Duplicate Types
+
+- **value_conflict** — Same variable defined with different values in multiple files
+- **similar_name** — Variables with similar names (e.g., `DB_URL` vs `DATABASE_URL`)
+
+### Example Usage
+
+> "Are there any conflicting environment variable definitions?"
+
+> "Do I have duplicate or similar variable names?"
+
+> "Check for environment variable name inconsistencies"
+
+---
+
+## get_undocumented
+
+Returns environment variables not present in `.env.example` or lacking documentation.
+
+### Input Schema
+
+```json
+{
+  "projectPath": "string (optional)"
+}
+```
+
+### Output Schema
+
+```json
+{
+  "undocumented": [
+    {
+      "name": "REDIS_URL",
+      "usedIn": ["src/cache.ts", "src/sessions.ts"],
+      "languages": ["typescript"],
+      "usageContext": "const redis = new Redis(process.env.REDIS_URL);",
+      "suggestedDescription": "Redis connection string",
+      "isSecret": false
+    }
+  ],
+  "totalUndocumented": 5,
+  "hasEnvExample": true,
+  "metadata": {
+    "projectPath": "/path/to/project",
+    "scannedFiles": 127,
+    "cacheHit": false,
+    "duration": 1234
+  }
+}
+```
+
+### Example Usage
+
+> "What environment variables are missing from .env.example?"
+
+> "Which variables need documentation?"
+
+> "Show me undocumented environment variables"
+
+---
+
+## get_env_usage
+
+Deep dive into a specific environment variable — shows every usage, risk profile, and recommendations.
+
+### Input Schema
+
+```json
+{
+  "variableName": "string (required)",
+  "projectPath": "string (optional)"
+}
+```
+
+**Parameters:**
+
+- `variableName` — Name of the environment variable to analyze (required)
+- `projectPath` — Path to project directory. Defaults to current working directory.
+
+### Output Schema
+
+```json
+{
+  "found": true,
+  "variable": {
+    "name": "DATABASE_URL",
+    "definitions": [
+      {
+        "file": ".env",
+        "line": 12,
+        "language": "env",
+        "context": "DATABASE_URL=postgresql://localhost/dev",
+        "hasDefault": false
+      }
+    ],
+    "usages": [
+      {
+        "file": "src/db/connection.ts",
+        "line": 5,
+        "language": "typescript",
+        "context": "const db = new Database(process.env.DATABASE_URL);",
+        "hasDefault": false
+      }
+    ],
+    "riskLevel": "medium",
+    "issues": [
+      {
+        "type": "NO_DEFAULT",
+        "message": "Used without fallback value",
+        "recommendation": "Add a default value or validation"
+      }
+    ],
+    "summary": {
+      "totalUsages": 8,
+      "totalDefinitions": 1,
+      "languages": ["typescript", "javascript"],
+      "hasDefault": false,
+      "isDocumented": true,
+      "definedInEnvFile": true,
+      "definedInExample": true
+    },
+    "recommendations": [
+      "Add a fallback value for development",
+      "Consider using a validation library like zod"
+    ]
+  },
+  "metadata": {
+    "projectPath": "/path/to/project",
+    "scannedFiles": 127,
+    "cacheHit": true,
+    "duration": 456
+  }
+}
+```
+
+### Example Usage
+
+> "Show me everywhere DATABASE_URL is used"
+
+> "What does the JWT_SECRET variable do?"
+
+> "Analyze the API_KEY environment variable"
+
+---
+
+## get_env_graph
+
+Returns the dependency graph of environment variables — shows which ones cluster together, which are load-bearing, and which are isolated.
+
+### Input Schema
+
+```json
+{
+  "projectPath": "string (optional)"
+}
+```
+
+### Output Schema
+
+```json
+{
+  "graph": {
+    "nodes": [
+      {
+        "name": "DATABASE_URL",
+        "usageCount": 8,
+        "fileCount": 5,
+        "cluster": "Database",
+        "isLoadBearing": true,
+        "connections": 3
+      }
+    ],
+    "edges": [
+      {
+        "from": "DATABASE_URL",
+        "to": "DB_POOL_SIZE",
+        "weight": 5,
+        "sharedFiles": ["src/db/connection.ts", "src/db/pool.ts"]
+      }
+    ],
+    "adjacencyList": {
+      "DATABASE_URL": ["DB_POOL_SIZE", "DB_SSL_MODE"],
+      "DB_POOL_SIZE": ["DATABASE_URL"]
+    }
+  },
+  "clusters": [
+    {
+      "name": "Database",
+      "variables": ["DATABASE_URL", "DB_POOL_SIZE", "DB_SSL_MODE"],
+      "size": 3,
+      "description": "Database connection and configuration"
+    }
+  ],
+  "loadBearingVars": ["DATABASE_URL", "API_KEY"],
+  "isolatedVars": ["FEATURE_FLAG_X"],
+  "stats": {
+    "totalNodes": 24,
+    "totalEdges": 45,
+    "totalClusters": 6,
+    "avgConnections": 3.75
+  },
+  "metadata": {
+    "projectPath": "/path/to/project",
+    "scannedFiles": 127,
+    "cacheHit": false,
+    "duration": 1987
+  }
+}
+```
+
+### Graph Concepts
+
+- **Node** — An environment variable
+- **Edge** — Connection between variables (used in same files)
+- **Cluster** — Group of related variables (e.g., all database config)
+- **Load-bearing** — Variables used in many files (critical infrastructure)
+- **Isolated** — Variables with no connections to others
+
+### Example Usage
+
+> "Show me the dependency graph of environment variables"
+
+> "Which variables are most critical to my app?"
+
+> "How are my environment variables related?"
+
+---
+
+## validate_env_file
+
+Validates a `.env` file against codebase requirements. Finds variables in the file that code never uses, variables code needs that aren't in the file, and variables with empty or placeholder values.
+
+### Input Schema
+
+```json
+{
+  "envFilePath": "string (required)",
+  "projectPath": "string (optional)"
+}
+```
+
+**Parameters:**
+
+- `envFilePath` — Path to the `.env` file to validate (relative to project or absolute)
+- `projectPath` — Path to project directory. Defaults to current working directory.
+
+### Output Schema
+
+```json
+{
+  "valid": false,
+  "envFilePath": ".env",
+  "results": {
+    "passed": [
+      {
+        "variable": "PORT",
+        "status": "pass",
+        "value": "3000"
+      }
+    ],
+    "warnings": [
+      {
+        "variable": "UNUSED_VAR",
+        "status": "warning",
+        "issue": "Defined in env file but never used in code",
+        "suggestion": "Remove if not needed, or verify it's used indirectly",
+        "value": "some-value"
+      }
+    ],
+    "failed": [
+      {
+        "variable": "API_KEY",
+        "status": "fail",
+        "issue": "Placeholder value detected",
+        "suggestion": "Replace with actual production value",
+        "value": "your-api-key-here"
+      },
+      {
+        "variable": "DATABASE_URL",
+        "status": "fail",
+        "issue": "Used in code but missing from env file",
+        "suggestion": "Add this variable to your env file"
+      }
+    ]
+  },
+  "summary": {
+    "total": 15,
+    "passed": 10,
+    "warnings": 2,
+    "failed": 3,
+    "unusedInFile": 2,
+    "missingFromFile": 1
+  },
+  "metadata": {
+    "projectPath": "/path/to/project",
+    "scannedFiles": 127,
+    "cacheHit": true,
+    "duration": 678
+  }
+}
+```
+
+### Validation Statuses
+
+| Status | Description |
+|--------|-------------|
+| **pass** | Variable is properly defined and used |
+| **warning** | Non-critical issue (e.g., unused variable) |
+| **fail** | Critical issue (e.g., placeholder value, missing variable) |
+
+### Example Usage
+
+> "Validate my .env file"
+
+> "Is my .env.production file correct?"
+
+> "Check if .env has all required variables"
+
+---
+
+## generate_env_template
+
+Scans the entire codebase and generates a complete `.env.example` file from scratch. Groups variables by cluster, adds inferred descriptions, and marks which are required vs optional.
+
+### Input Schema
+
+```json
+{
+  "projectPath": "string (optional)",
+  "outputPath": "string (optional)"
+}
+```
+
+**Parameters:**
+
+- `projectPath` — Path to project directory. Defaults to current working directory.
+- `outputPath` — Path to write the generated file. If not provided, only returns content without writing.
+
+### Output Schema
+
+```json
+{
+  "content": "# Environment Variables\n# Generated by Envark\n...",
+  "variableCount": 18,
+  "clusterCount": 5,
+  "requiredCount": 8,
+  "optionalCount": 10,
+  "writtenTo": ".env.example",
+  "metadata": {
+    "projectPath": "/path/to/project",
+    "scannedFiles": 127,
+    "cacheHit": false,
+    "duration": 2134
+  }
+}
+```
+
+### Generated Content Example
+
+```bash .env.example (generated)
+# Environment Variables
+# Generated by Envark
+#
+# Required variables are marked with [REQUIRED]
+# Optional variables (with defaults) are marked with [OPTIONAL]
+
+# ============================================
+# Database
+# ============================================
+
+# Database connection string [REQUIRED]
+DATABASE_URL=your-secret-here
+
+# Database host address [OPTIONAL]
+DB_HOST=localhost
+
+# Database port number [OPTIONAL]
+DB_PORT=5432
+
+# ============================================
+# Authentication
+# ============================================
+
+# Secret key for JWT token signing [REQUIRED]
+JWT_SECRET=your-secret-here
+
+# Session secret for cookie encryption [REQUIRED]
+SESSION_SECRET=your-secret-here
+
+# ============================================
+# API
+# ============================================
+
+# Stripe payment configuration [REQUIRED]
+STRIPE_SECRET_KEY=your-secret-here
+
+# SendGrid email service configuration [OPTIONAL]
+SENDGRID_API_KEY=
+```
+
+### Example Usage
+
+> "Generate a .env.example file for my project"
+
+> "Create an environment template"
+
+> "What should my .env.example look like?"
+
+---
+
+## Common Parameters
+
+All tools support these optional parameters:
+
+### projectPath
+
+- **Type**: `string`
+- **Default**: Current working directory
+- **Description**: Path to the project to analyze
+
+**Example:**
+
+```json
+{
+  "projectPath": "/Users/alex/projects/my-app"
+}
+```
+
+### Metadata Response
+
+All tools return a `metadata` object with:
+
+```json
+{
+  "projectPath": "/path/to/project",
+  "scannedFiles": 127,
+  "cacheHit": true,
+  "duration": 1234
+}
+```
+
+- `projectPath` — Resolved absolute path to the project
+- `scannedFiles` — Number of files scanned
+- `cacheHit` — Whether results were loaded from cache
+- `duration` — Time taken in milliseconds
+
+## Error Handling
+
+All tools return errors in this format:
+
+```json
+{
+  "error": "Error message describing what went wrong"
+}
+```
+
+Common errors:
+
+- `Project not found` — Invalid `projectPath`
+- `Permission denied` — Can't read project files
+- `Invalid parameter` — Missing required parameter or invalid value
+
+## Performance Tips
+
+<AccordionGroup>
+  <Accordion title="Use caching">
+    Envark automatically caches scan results in `.envark/cache.json`. The cache is invalidated when:
+    - Any source file changes (checked via mtime)
+    - Any `.env` file changes
+    - Cache is older than 1 hour
+
+    For best performance, run multiple tools in sequence — later tools will use the cached scan.
+  </Accordion>
+
+  <Accordion title="Filter early">
+    When you only need specific variables, use the `filter` parameter in `get_env_map` rather than retrieving all variables and filtering in the AI.
+
+    ```json
+    // Good - filter server-side
+    { "filter": "missing" }
+
+    // Less efficient - retrieve all, filter client-side
+    { "filter": "all" }
+    ```
+  </Accordion>
+
+  <Accordion title="Configure .gitignore properly">
+    Ensure your `.gitignore` excludes large directories:
+
+    ```gitignore
+    node_modules/
+    .git/
+    dist/
+    build/
+    .next/
+    coverage/
+    ```
+
+    Envark respects `.gitignore` by default.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Setup Guide" icon="gear" href="/mcp/setup">
+    Configure Envark in your IDE
+  </Card>
+  <Card title="Usage Examples" icon="code" href="/features/ai-assistant">
+    See real conversations using these tools
+  </Card>
+</CardGroup>

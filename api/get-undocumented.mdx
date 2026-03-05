@@ -1,0 +1,241 @@
+---
+title: "get_undocumented"
+description: "Returns environment variables not present in .env.example or lacking documentation"
+---
+
+## Overview
+
+The `get_undocumented` tool identifies all environment variables that are used in code but not documented in .env.example files. It provides usage context and suggested descriptions to help document each variable.
+
+## Parameters
+
+<ParamField path="projectPath" type="string" optional>
+  Path to the project directory. Defaults to current working directory.
+</ParamField>
+
+## Response
+
+<ResponseField name="undocumented" type="array" required>
+  Array of undocumented environment variables
+  
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">
+      Variable name
+    </ResponseField>
+    <ResponseField name="usedIn" type="string[]">
+      Files where this variable is used (limited to first 5)
+    </ResponseField>
+    <ResponseField name="languages" type="string[]">
+      Programming languages using this variable
+    </ResponseField>
+    <ResponseField name="usageContext" type="string">
+      Code snippet showing how the variable is used
+    </ResponseField>
+    <ResponseField name="suggestedDescription" type="string">
+      Auto-generated description suggestion
+    </ResponseField>
+    <ResponseField name="isSecret" type="boolean">
+      Whether the variable appears to contain sensitive data
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="totalUndocumented" type="number" required>
+  Total number of undocumented variables
+</ResponseField>
+
+<ResponseField name="hasEnvExample" type="boolean" required>
+  Whether the project has any .env.example files
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  Scan metadata
+  
+  <Expandable title="properties">
+    <ResponseField name="projectPath" type="string">
+      Absolute path to the scanned project
+    </ResponseField>
+    <ResponseField name="scannedFiles" type="number">
+      Number of files scanned
+    </ResponseField>
+    <ResponseField name="cacheHit" type="boolean">
+      Whether the scan used cached results
+    </ResponseField>
+    <ResponseField name="duration" type="number">
+      Scan duration in milliseconds
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Response
+
+```json
+{
+  "undocumented": [
+    {
+      "name": "API_KEY",
+      "usedIn": [
+        "src/api/client.ts",
+        "src/services/external-api.ts",
+        "src/middleware/auth.ts"
+      ],
+      "languages": ["typescript"],
+      "usageContext": "const apiKey = process.env.API_KEY;",
+      "suggestedDescription": "API key for external service",
+      "isSecret": true
+    },
+    {
+      "name": "WEBHOOK_URL",
+      "usedIn": [
+        "src/webhooks/sender.ts"
+      ],
+      "languages": ["typescript"],
+      "usageContext": "await fetch(process.env.WEBHOOK_URL, { method: 'POST', ... });",
+      "suggestedDescription": "URL endpoint for webhook",
+      "isSecret": false
+    },
+    {
+      "name": "DATABASE_POOL_SIZE",
+      "usedIn": [
+        "src/db/connection.ts"
+      ],
+      "languages": ["typescript"],
+      "usageContext": "max: parseInt(process.env.DATABASE_POOL_SIZE || '10')",
+      "suggestedDescription": "Configuration for database pool size",
+      "isSecret": false
+    },
+    {
+      "name": "JWT_SECRET",
+      "usedIn": [
+        "src/auth/jwt.ts",
+        "src/middleware/verify-token.ts"
+      ],
+      "languages": ["typescript"],
+      "usageContext": "jwt.sign(payload, process.env.JWT_SECRET);",
+      "suggestedDescription": "Secret key for JWT token signing",
+      "isSecret": true
+    },
+    {
+      "name": "SMTP_HOST",
+      "usedIn": [
+        "src/email/transporter.ts"
+      ],
+      "languages": ["typescript"],
+      "usageContext": "host: process.env.SMTP_HOST",
+      "suggestedDescription": "SMTP host address",
+      "isSecret": false
+    }
+  ],
+  "totalUndocumented": 5,
+  "hasEnvExample": true,
+  "metadata": {
+    "projectPath": "/Users/dev/my-project",
+    "scannedFiles": 156,
+    "cacheHit": false,
+    "duration": 189
+  }
+}
+```
+
+## Usage Example
+
+AI assistants can use this tool to identify undocumented variables:
+
+```json
+{
+  "name": "get_undocumented",
+  "arguments": {
+    "projectPath": "/path/to/project"
+  }
+}
+```
+
+Minimal call:
+
+```json
+{
+  "name": "get_undocumented",
+  "arguments": {}
+}
+```
+
+## Description Suggestions
+
+The tool automatically generates description suggestions based on:
+
+### Known Patterns
+
+Common variables get standard descriptions:
+- `DATABASE_URL` → "Database connection string"
+- `API_KEY` → "API key for external service"
+- `JWT_SECRET` → "Secret key for JWT token signing"
+- `PORT` → "Server port number"
+- `NODE_ENV` → "Node.js environment (development/production)"
+
+### Service Prefixes
+
+Variables with known service prefixes:
+- `AWS_*` → "AWS service configuration"
+- `STRIPE_*` → "Stripe payment configuration"
+- `SENDGRID_*` → "SendGrid email service configuration"
+- `SENTRY_*` → "Sentry error tracking configuration"
+
+### Suffix Analysis
+
+Common suffixes get context-appropriate descriptions:
+- `*_URL` → "URL endpoint for [name]"
+- `*_HOST` → "Host address for [name]"
+- `*_PORT` → "Port number for [name]"
+- `*_KEY` → "API/access key for [name]"
+- `*_SECRET` → "Secret key for [name]"
+- `*_TOKEN` → "Authentication token for [name]"
+
+### Name-Based Generation
+
+For other variables, descriptions are generated from the variable name:
+- `EMAIL_FROM` → "Configuration for email from"
+- `MAX_RETRIES` → "Configuration for max retries"
+
+## Secret Detection
+
+The `isSecret` field indicates if the variable likely contains sensitive data. It's marked as `true` if the name matches:
+
+- `*SECRET*`
+- `*PASSWORD*`
+- `*TOKEN*`
+- `*_KEY` (ending with _KEY)
+- `*API_KEY*`
+- `*PRIVATE*`
+
+This helps prioritize security when documenting variables.
+
+## Usage Context
+
+The `usageContext` field shows the first occurrence of the variable in code, helping understand:
+- How the variable is accessed (process.env, import.meta.env, etc.)
+- Whether it has a default/fallback value
+- What the variable is used for
+
+Example contexts:
+```typescript
+const apiKey = process.env.API_KEY;
+max: parseInt(process.env.DATABASE_POOL_SIZE || '10')
+jwt.sign(payload, process.env.JWT_SECRET);
+```
+
+## Use Cases
+
+- **Documentation**: Automatically generate entries for .env.example
+- **Onboarding**: Help new developers understand all required configuration
+- **Security Audit**: Identify undocumented secrets that should be tracked
+- **Maintenance**: Keep .env.example in sync with actual code usage
+- **Code Review**: Ensure new variables are properly documented
+
+## Workflow
+
+1. Call `get_undocumented` to find all undocumented variables
+2. Review the suggested descriptions and usage context
+3. Add variables to .env.example with appropriate descriptions
+4. Mark secrets with clear warnings
+5. Provide example values or placeholder text
+6. Re-run to verify all variables are now documented

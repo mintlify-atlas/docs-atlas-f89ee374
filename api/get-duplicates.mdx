@@ -1,0 +1,223 @@
+---
+title: "get_duplicates"
+description: "Find conflicting definitions and similar variable names"
+---
+
+## Overview
+
+The `get_duplicates` tool identifies two types of issues:
+1. **Value conflicts**: Environment variables defined with different values across multiple .env files
+2. **Similar names**: Variable names that might represent the same concept (e.g., DB_URL vs DATABASE_URL)
+
+## Parameters
+
+<ParamField path="projectPath" type="string" optional>
+  Path to the project directory. Defaults to current working directory.
+</ParamField>
+
+## Response
+
+<ResponseField name="duplicates" type="array" required>
+  Array of duplicate groups (both value conflicts and similar names)
+  
+  <Expandable title="properties">
+    <ResponseField name="variableName" type="string">
+      Primary variable name
+    </ResponseField>
+    <ResponseField name="type" type="string">
+      Type of duplicate: "value_conflict" or "similar_name"
+    </ResponseField>
+    <ResponseField name="values" type="array" optional>
+      Conflicting values (only for value_conflict type)
+      
+      <Expandable title="value object">
+        <ResponseField name="file" type="string">
+          File where this value is defined
+        </ResponseField>
+        <ResponseField name="value" type="string">
+          The conflicting value
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="similarNames" type="string[]" optional>
+      Array of similar variable names (only for similar_name type)
+    </ResponseField>
+    <ResponseField name="recommendation" type="string">
+      Recommended action to resolve the duplicate
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="valueConflicts" type="number" required>
+  Number of variables with value conflicts
+</ResponseField>
+
+<ResponseField name="similarNameGroups" type="number" required>
+  Number of similar name groups detected
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  Scan metadata
+  
+  <Expandable title="properties">
+    <ResponseField name="projectPath" type="string">
+      Absolute path to the scanned project
+    </ResponseField>
+    <ResponseField name="scannedFiles" type="number">
+      Number of files scanned
+    </ResponseField>
+    <ResponseField name="cacheHit" type="boolean">
+      Whether the scan used cached results
+    </ResponseField>
+    <ResponseField name="duration" type="number">
+      Scan duration in milliseconds
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Response
+
+```json
+{
+  "duplicates": [
+    {
+      "variableName": "DATABASE_URL",
+      "type": "value_conflict",
+      "values": [
+        {
+          "file": ".env.development",
+          "value": "postgresql://localhost:5432/dev_db"
+        },
+        {
+          "file": ".env.staging",
+          "value": "postgresql://staging.example.com:5432/staging_db"
+        },
+        {
+          "file": ".env.production",
+          "value": "postgresql://prod.example.com:5432/prod_db"
+        }
+      ],
+      "recommendation": "Consolidate DATABASE_URL to have the same value across all .env files, or use environment-specific values intentionally."
+    },
+    {
+      "variableName": "API_KEY",
+      "type": "value_conflict",
+      "values": [
+        {
+          "file": ".env",
+          "value": "sk_test_abc123"
+        },
+        {
+          "file": ".env.local",
+          "value": "sk_test_xyz789"
+        }
+      ],
+      "recommendation": "Consolidate API_KEY to have the same value across all .env files, or use environment-specific values intentionally."
+    },
+    {
+      "variableName": "DATABASE_URL",
+      "type": "similar_name",
+      "similarNames": [
+        "DATABASE_URL",
+        "DB_URL",
+        "DATABASE_URI"
+      ],
+      "recommendation": "Consider standardizing these variable names: DATABASE_URL, DB_URL, DATABASE_URI. They may represent the same concept."
+    },
+    {
+      "variableName": "REDIS_HOST",
+      "type": "similar_name",
+      "similarNames": [
+        "REDIS_HOST",
+        "REDIS_HOSTNAME"
+      ],
+      "recommendation": "Consider standardizing these variable names: REDIS_HOST, REDIS_HOSTNAME. They may represent the same concept."
+    }
+  ],
+  "valueConflicts": 2,
+  "similarNameGroups": 2,
+  "metadata": {
+    "projectPath": "/Users/dev/my-project",
+    "scannedFiles": 156,
+    "cacheHit": false,
+    "duration": 203
+  }
+}
+```
+
+## Usage Example
+
+AI assistants can use this tool to identify and resolve duplicate issues:
+
+```json
+{
+  "name": "get_duplicates",
+  "arguments": {
+    "projectPath": "/path/to/project"
+  }
+}
+```
+
+Minimal call:
+
+```json
+{
+  "name": "get_duplicates",
+  "arguments": {}
+}
+```
+
+## Conflict Types
+
+### Value Conflicts
+
+Occurs when the same variable name is defined in multiple .env files with different values. This can indicate:
+
+- **Intentional**: Environment-specific configuration (dev vs staging vs prod)
+- **Unintentional**: Copy-paste errors or outdated values that should be synchronized
+
+The tool reports all conflicts and lets you decide which are intentional.
+
+### Similar Names
+
+Detects variable names that are similar and might represent the same concept:
+
+- `DATABASE_URL` vs `DB_URL` vs `DATABASE_URI`
+- `REDIS_HOST` vs `REDIS_HOSTNAME`
+- `API_KEY` vs `APIKEY`
+- `SMTP_USER` vs `SMTP_USERNAME`
+
+These often indicate:
+- Inconsistent naming conventions
+- Legacy variables that weren't fully migrated
+- Different developers using different conventions
+
+## Similarity Detection
+
+The tool detects similar names using:
+
+1. **Edit distance**: Names that differ by only a few characters
+2. **Common variations**: URL/URI, HOST/HOSTNAME, USER/USERNAME, etc.
+3. **Abbreviations**: DB/DATABASE, API/APIKEY, etc.
+4. **Underscore variations**: Different separator patterns
+
+## Use Cases
+
+- **Environment Sync**: Ensure consistent configuration across development, staging, and production
+- **Naming Standards**: Identify inconsistent variable naming that should be standardized
+- **Migration**: Find legacy variable names during codebase refactoring
+- **Configuration Review**: Audit all .env files for conflicts before deployment
+- **Team Collaboration**: Prevent different team members from creating similar variables
+
+## Recommendations
+
+For **value conflicts**:
+- If intentional (different environments), consider using different .env files per environment
+- If unintentional, consolidate to a single value or ensure synchronization
+- Document why different values exist
+
+For **similar names**:
+- Choose one canonical name and migrate all usages
+- Update code to use the standardized name
+- Add the standardized name to .env.example with documentation
+- Remove or deprecate the old variations

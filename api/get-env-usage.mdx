@@ -1,0 +1,327 @@
+---
+title: "get_env_usage"
+description: "Deep dive into a specific environment variable showing all usage details"
+---
+
+## Overview
+
+The `get_env_usage` tool provides a comprehensive analysis of a single environment variable. It shows:
+- Every place the variable is used in code
+- What the code does with it
+- Whether it has fallback values
+- Full risk profile and issues
+- Specific recommendations
+
+## Parameters
+
+<ParamField path="variableName" type="string" required>
+  The name of the environment variable to analyze (case-insensitive)
+</ParamField>
+
+<ParamField path="projectPath" type="string" optional>
+  Path to the project directory. Defaults to current working directory.
+</ParamField>
+
+## Response
+
+<ResponseField name="found" type="boolean" required>
+  Whether the variable was found in the project
+</ResponseField>
+
+<ResponseField name="variable" type="object" optional>
+  Variable details (only present if found=true)
+  
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">
+      Variable name (uppercase)
+    </ResponseField>
+    
+    <ResponseField name="definitions" type="array">
+      Where the variable is defined
+      
+      <Expandable title="location object">
+        <ResponseField name="file" type="string">
+          Relative path to the file
+        </ResponseField>
+        <ResponseField name="line" type="number">
+          Line number
+        </ResponseField>
+        <ResponseField name="language" type="string">
+          Language (e.g., "env")
+        </ResponseField>
+        <ResponseField name="context" type="string">
+          Code context
+        </ResponseField>
+        <ResponseField name="hasDefault" type="boolean">
+          Whether this definition includes a default value
+        </ResponseField>
+        <ResponseField name="defaultValue" type="string" optional>
+          The default value (if hasDefault=true)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="usages" type="array">
+      Where the variable is used (limited to first 20)
+      
+      <Expandable title="location object">
+        <ResponseField name="file" type="string">
+          Relative path to the file
+        </ResponseField>
+        <ResponseField name="line" type="number">
+          Line number
+        </ResponseField>
+        <ResponseField name="language" type="string">
+          Programming language
+        </ResponseField>
+        <ResponseField name="context" type="string">
+          Code snippet showing usage
+        </ResponseField>
+        <ResponseField name="hasDefault" type="boolean">
+          Whether this usage has a fallback value
+        </ResponseField>
+        <ResponseField name="defaultValue" type="string" optional>
+          The fallback value (if hasDefault=true)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="riskLevel" type="string">
+      Overall risk level: critical, high, medium, low, or info
+    </ResponseField>
+    
+    <ResponseField name="issues" type="array">
+      Array of detected issues
+      
+      <Expandable title="issue object">
+        <ResponseField name="type" type="string">
+          Issue type (e.g., MISSING, UNDOCUMENTED)
+        </ResponseField>
+        <ResponseField name="message" type="string">
+          Human-readable description
+        </ResponseField>
+        <ResponseField name="recommendation" type="string">
+          Specific fix recommendation
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="summary" type="object">
+      Usage summary
+      
+      <Expandable title="properties">
+        <ResponseField name="totalUsages" type="number">
+          Total number of usages in code
+        </ResponseField>
+        <ResponseField name="totalDefinitions" type="number">
+          Total number of definitions in .env files
+        </ResponseField>
+        <ResponseField name="languages" type="string[]">
+          Programming languages using this variable
+        </ResponseField>
+        <ResponseField name="hasDefault" type="boolean">
+          Whether any usage has a default value
+        </ResponseField>
+        <ResponseField name="isDocumented" type="boolean">
+          Whether documented in .env.example
+        </ResponseField>
+        <ResponseField name="definedInEnvFile" type="boolean">
+          Whether defined in any .env file
+        </ResponseField>
+        <ResponseField name="definedInExample" type="boolean">
+          Whether defined in .env.example
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="recommendations" type="string[]">
+      Array of specific action recommendations
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  Scan metadata
+  
+  <Expandable title="properties">
+    <ResponseField name="projectPath" type="string">
+      Absolute path to the scanned project
+    </ResponseField>
+    <ResponseField name="scannedFiles" type="number">
+      Number of files scanned
+    </ResponseField>
+    <ResponseField name="cacheHit" type="boolean">
+      Whether the scan used cached results
+    </ResponseField>
+    <ResponseField name="duration" type="number">
+      Scan duration in milliseconds
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Response (Found)
+
+```json
+{
+  "found": true,
+  "variable": {
+    "name": "API_KEY",
+    "definitions": [
+      {
+        "file": ".env",
+        "line": 12,
+        "language": "env",
+        "context": "API_KEY=sk_test_abc123",
+        "hasDefault": false
+      },
+      {
+        "file": ".env.example",
+        "line": 8,
+        "language": "env",
+        "context": "API_KEY=your-api-key-here",
+        "hasDefault": false
+      }
+    ],
+    "usages": [
+      {
+        "file": "src/api/client.ts",
+        "line": 15,
+        "language": "typescript",
+        "context": "const apiKey = process.env.API_KEY;",
+        "hasDefault": false
+      },
+      {
+        "file": "src/services/external-api.ts",
+        "line": 28,
+        "language": "typescript",
+        "context": "headers: { 'Authorization': `Bearer ${process.env.API_KEY}` }",
+        "hasDefault": false
+      },
+      {
+        "file": "src/config/api.ts",
+        "line": 5,
+        "language": "typescript",
+        "context": "apiKey: process.env.API_KEY || 'default-key'",
+        "hasDefault": true,
+        "defaultValue": "default-key"
+      }
+    ],
+    "riskLevel": "high",
+    "issues": [
+      {
+        "type": "INCONSISTENT_DEFAULT",
+        "message": "Variable has a default value in some usages but not others",
+        "recommendation": "Ensure consistent fallback handling across all usages of API_KEY"
+      }
+    ],
+    "summary": {
+      "totalUsages": 8,
+      "totalDefinitions": 2,
+      "languages": ["typescript"],
+      "hasDefault": true,
+      "isDocumented": true,
+      "definedInEnvFile": true,
+      "definedInExample": true
+    },
+    "recommendations": [
+      "Remove default value 'default-key' from src/config/api.ts as it may mask missing configuration",
+      "Ensure API_KEY is set in all environments before deployment"
+    ]
+  },
+  "metadata": {
+    "projectPath": "/Users/dev/my-project",
+    "scannedFiles": 156,
+    "cacheHit": false,
+    "duration": 201
+  }
+}
+```
+
+## Example Response (Not Found)
+
+```json
+{
+  "found": false,
+  "metadata": {
+    "projectPath": "/Users/dev/my-project",
+    "scannedFiles": 156,
+    "cacheHit": false,
+    "duration": 187
+  }
+}
+```
+
+## Usage Example
+
+Analyze a specific variable:
+
+```json
+{
+  "name": "get_env_usage",
+  "arguments": {
+    "variableName": "API_KEY",
+    "projectPath": "/path/to/project"
+  }
+}
+```
+
+Case-insensitive lookup:
+
+```json
+{
+  "name": "get_env_usage",
+  "arguments": {
+    "variableName": "api_key"
+  }
+}
+```
+
+## Code Context Examples
+
+The `context` field shows actual code snippets:
+
+```typescript
+// Direct access
+"const apiKey = process.env.API_KEY;"
+
+// With default value
+"const port = process.env.PORT || 3000;"
+
+// In object
+"headers: { 'Authorization': `Bearer ${process.env.API_KEY}` }"
+
+// With validation
+"if (!process.env.DATABASE_URL) throw new Error('Missing DATABASE_URL');"
+
+// Destructuring
+"const { API_KEY, API_SECRET } = process.env;"
+
+// parseInt/parseFloat
+"max: parseInt(process.env.DATABASE_POOL_SIZE || '10')"
+```
+
+## Risk Levels
+
+- **critical**: Missing variable with no defaults, used in multiple places
+- **high**: Secrets, database configs, or widely-used variables with issues
+- **medium**: Undocumented or inconsistently used variables
+- **low**: Minor issues like unused variables
+- **info**: Well-configured variables with no issues
+
+## Common Issues
+
+- **MISSING**: Used in code but not defined anywhere
+- **UNDOCUMENTED**: Not in .env.example
+- **DEAD**: Defined but never used
+- **INCONSISTENT_DEFAULT**: Has defaults in some places but not others
+- **PLACEHOLDER_VALUE**: Contains placeholder text
+- **NO_VALIDATION**: No validation or error handling
+
+## Use Cases
+
+- **Debugging**: Understand where a variable is used and how
+- **Refactoring**: See all usages before renaming or removing
+- **Security Review**: Analyze how secrets are handled
+- **Default Values**: Check if fallbacks are appropriate
+- **Impact Analysis**: Assess impact of changing a variable
+- **Documentation**: Generate detailed variable documentation

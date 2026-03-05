@@ -1,0 +1,648 @@
+---
+title: AI Assistant
+description: Leverage AI to analyze environment variables, get security recommendations, and generate configuration templates
+---
+
+## Overview
+
+Envark's AI Assistant provides intelligent analysis of your environment variables using state-of-the-art language models. It offers security insights, best practice recommendations, and interactive help for managing your application configuration.
+
+## Supported Providers
+
+Envark supports four AI providers, each with different models and capabilities:
+
+<Tabs>
+  <Tab title="OpenAI">
+    **Provider: OpenAI**
+
+    Best for: High-quality analysis, detailed explanations, code generation
+
+    **Available Models:**
+    - `gpt-4o` (recommended) - Latest GPT-4 optimized model
+    - `gpt-4-turbo` - Fast GPT-4 variant
+    - `gpt-4` - Standard GPT-4
+    - `gpt-3.5-turbo` - Fast and cost-effective
+
+    **Setup:**
+    ```bash
+    # Get API key from https://platform.openai.com/api-keys
+    export OPENAI_API_KEY=sk-...
+
+    # Or configure interactively
+    envark
+    /ai-config
+    # Select OpenAI, enter key, choose model
+    ```
+
+    **Pricing:** Pay per token (most expensive but highest quality)
+  </Tab>
+
+  <Tab title="Anthropic">
+    **Provider: Anthropic Claude**
+
+    Best for: Security analysis, nuanced reasoning, longer context
+
+    **Available Models:**
+    - `claude-sonnet-4-20250514` (recommended) - Latest Claude 4
+    - `claude-3-5-sonnet-20241022` - Claude 3.5
+    - `claude-3-opus-20240229` - Most capable Claude 3
+
+    **Setup:**
+    ```bash
+    # Get API key from https://console.anthropic.com/
+    export ANTHROPIC_API_KEY=sk-ant-...
+
+    # Or configure interactively
+    envark
+    /ai-config
+    # Select Anthropic, enter key, choose model
+    ```
+
+    **Pricing:** Pay per token (competitive with OpenAI)
+  </Tab>
+
+  <Tab title="Google Gemini">
+    **Provider: Google Gemini**
+
+    Best for: Free tier, fast responses, multimodal capabilities
+
+    **Available Models:**
+    - `gemini-2.0-flash` (recommended) - Latest fast model
+    - `gemini-1.5-pro` - High capability
+    - `gemini-1.5-flash` - Fast and efficient
+    - `gemini-pro` - Stable version
+
+    **Setup:**
+    ```bash
+    # Get API key from https://makersuite.google.com/app/apikey
+    export GEMINI_API_KEY=...
+    # or
+    export GOOGLE_API_KEY=...
+
+    # Or configure interactively
+    envark
+    /ai-config
+    # Select Google Gemini, enter key, choose model
+    ```
+
+    **Pricing:** Free tier available, then pay per token
+  </Tab>
+
+  <Tab title="Ollama (Local)">
+    **Provider: Ollama (Local)**
+
+    Best for: Privacy, no API costs, offline usage
+
+    **Available Models:**
+    - `llama3.2` (recommended) - Latest Llama
+    - `llama3.1` - Previous Llama version
+    - `mistral` - Fast and efficient
+    - `codellama` - Optimized for code
+    - `phi3` - Lightweight model
+
+    **Setup:**
+    ```bash
+    # Install Ollama (https://ollama.ai)
+    curl -fsSL https://ollama.ai/install.sh | sh
+
+    # Pull a model
+    ollama pull llama3.2
+
+    # Start Ollama service
+    ollama serve
+
+    # Configure in Envark
+    envark
+    /ai-config
+    # Select Ollama, press Enter (no key needed), choose model
+    ```
+
+    **Pricing:** Free (runs locally)
+
+    <Warning>
+    Requires 8GB+ RAM for most models. Responses may be slower than cloud APIs.
+    </Warning>
+  </Tab>
+</Tabs>
+
+## Configuration
+
+### Interactive Configuration
+
+The easiest way to set up an AI provider:
+
+```bash
+envark
+/ai-config
+```
+
+This launches a step-by-step wizard:
+
+1. **Select Provider** - Arrow keys to choose, Enter to select
+2. **Enter API Key** - Type your key (hidden for security, skipped for Ollama)
+3. **Choose Model** - Select from provider-specific models
+
+<Note>
+Configuration is automatically saved to `~/.envark/ai-config.json` and persists across sessions.
+</Note>
+
+### Environment Variable Configuration
+
+Set up providers using environment variables (no interactive config needed):
+
+```bash
+# OpenAI
+export OPENAI_API_KEY=sk-...
+
+# Anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Google Gemini
+export GEMINI_API_KEY=...
+# or
+export GOOGLE_API_KEY=...
+
+# Ollama (no key needed, just ensure service is running)
+```
+
+Envark automatically detects and uses these credentials with priority: OpenAI > Anthropic > Gemini > Ollama.
+
+### Configuration File
+
+Configuration is stored at `~/.envark/ai-config.json`:
+
+```json
+{
+  "provider": "openai",
+  "apiKey": "sk-...",
+  "model": "gpt-4o",
+  "lastUpdated": "2026-03-05T10:30:00.000Z"
+}
+```
+
+You can edit this file directly or use `/ai-config` to update it.
+
+## AI Commands
+
+Once configured, access AI features through these commands:
+
+### Interactive Chat
+
+**Command:** `/chat` or `ch`
+
+Start a conversational session with the AI assistant:
+
+```bash
+envark
+/chat
+
+You: What's the difference between .env and .env.local?
+
+ AI: .env is typically committed to version control and contains
+     default/example values, while .env.local is git-ignored and
+     contains your actual local development secrets. The .env.local
+     file overrides values from .env when both are present.
+
+You: Should I commit API keys?
+
+ AI: No, never commit API keys or secrets to version control...
+
+You: /exit
+```
+
+Features:
+- Maintains conversation context (last 20 messages)
+- Understands follow-up questions
+- Provides code examples in markdown
+- Type `/exit` to return to normal mode
+
+### Quick Questions
+
+**Command:** `/ask <question>` or `a <question>`
+
+Ask a one-off question without entering chat mode:
+
+```bash
+/ask How do I secure database credentials?
+/ask What's a good naming convention for environment variables?
+a Should I use uppercase or lowercase for env vars?
+```
+
+Use this for quick answers without starting a full conversation.
+
+### Environment Analysis
+
+**Command:** `/analyze` or `an`
+
+Get AI-powered analysis of your entire environment configuration:
+
+```bash
+/analyze
+```
+
+**What it does:**
+1. Scans your project for all environment variables
+2. Sends variable names and risk levels to AI (not values)
+3. Returns comprehensive security and best practice analysis
+
+**Example output:**
+```
+Summary:
+Your project uses 42 environment variables across Node.js and TypeScript.
+Found 2 critical issues and 5 high-priority recommendations.
+
+Recommendations:
+  • Move DATABASE_PASSWORD from .env to .env.local to prevent accidental commits
+  • Add validation for PORT to ensure it's a valid number
+  • Consider using a secret management solution for API keys
+  • Standardize naming: use DATABASE_URL instead of mixing DB_URL and DATABASE_URI
+  • Add .env.example with placeholder values for all required variables
+```
+
+**Implementation:**
+```typescript
+// From src/ai/agent.ts:213-223
+async analyzeEnvironment(context: EnvAnalysisContext): Promise<AIAnalysisResult> {
+    if (!this.provider) {
+        return {
+            summary: 'AI not configured',
+            recommendations: ['Configure an AI provider using /config command'],
+            securityIssues: []
+        };
+    }
+
+    return this.provider.analyzeEnvironment(context);
+}
+```
+
+### Variable Suggestions
+
+**Command:** `/suggest <VARIABLE_NAME>` or `su <VARIABLE_NAME>`
+
+Get improvement suggestions for a specific variable:
+
+```bash
+/suggest DATABASE_URL
+```
+
+**Example output:**
+```
+Suggestions for DATABASE_URL:
+  1. Add connection pooling parameters (e.g., ?pool_size=10)
+  2. Use SSL mode in production: ?sslmode=require
+  3. Consider splitting into separate host, port, database for flexibility
+  4. Document expected format in .env.example
+  5. Validate URL format at startup to fail fast on misconfiguration
+```
+
+### Variable Explanation
+
+**Command:** `/explain <VARIABLE_NAME>` or `ex <VARIABLE_NAME>`
+
+Get detailed explanation about an environment variable:
+
+```bash
+/explain NODE_ENV
+```
+
+**Example output:**
+```
+NODE_ENV is a convention in Node.js applications to specify the runtime
+environment.
+
+1. Purpose:
+   - Controls application behavior (logging, caching, debugging)
+   - Determines which optimizations to enable
+   - Often used for conditional logic
+
+2. Common Values:
+   - "development" - Local development with debugging
+   - "production" - Optimized for production deployment
+   - "test" - Used during automated testing
+
+3. Security Considerations:
+   - Not inherently secret, safe to expose
+   - Production mode should disable debug features
+   - Never use "development" in production
+
+4. Framework Support:
+   - Express.js uses it for error handling
+   - React build tools use it for optimization
+   - Many libraries check this for behavior changes
+```
+
+### Template Generation
+
+**Command:** `/template <description>` or `tpl <description>`
+
+Generate a .env template for your project type:
+
+```bash
+/template Next.js application with authentication
+tpl Django REST API with PostgreSQL and Redis
+```
+
+**Example output:**
+```bash
+# ==========================================
+# Next.js Application Environment Variables
+# ==========================================
+
+# Application
+NEXT_PUBLIC_APP_NAME=MyApp
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NODE_ENV=development
+
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/myapp
+
+# Authentication
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=changeme-generate-with-openssl-rand-base64-32
+
+# OAuth Providers (optional)
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GITHUB_CLIENT_ID=your-client-id
+GITHUB_CLIENT_SECRET=your-client-secret
+
+# Email (optional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+```
+
+## AI System Prompt
+
+The AI assistant operates with a specialized system prompt that focuses on environment variable security:
+
+```typescript
+// From src/ai/agent.ts:316-337
+private getEnhancedSystemPrompt(): string {
+    return `You are Aegis AI, an expert environment variable security analyst integrated into the Aegis CLI tool.
+
+Your capabilities:
+- Analyze environment variables for security risks
+- Provide recommendations for better configuration management
+- Generate secure .env templates and validation code
+- Explain best practices for different frameworks and languages
+- Help debug configuration issues
+
+Current context:
+- Running in Aegis CLI terminal interface
+- User can scan their project with /scan, /risk, /missing commands
+- Use markdown formatting for code blocks
+
+Guidelines:
+- Be concise but thorough
+- Always consider security implications
+- Provide actionable recommendations
+- Use code examples when helpful
+- Consider different deployment environments`;
+}
+```
+
+This ensures the AI provides relevant, security-focused advice.
+
+## Security & Privacy
+
+<CardGroup cols={2}>
+  <Card title="No Value Transmission" icon="shield-check">
+    Envark **never sends actual environment variable values** to AI APIs. Only variable names and metadata are transmitted.
+  </Card>
+
+  <Card title="Value Masking" icon="mask">
+    When values must be referenced, they're automatically masked:
+    
+    ```typescript
+    // From src/ai/agent.ts:339-343
+    private maskSensitiveValue(value: string): string {
+        if (value.length < 4) return '***';
+        if (value.length < 8) return value.slice(0, 1) + '***' + value.slice(-1);
+        return value.slice(0, 2) + '***' + value.slice(-2);
+    }
+    ```
+
+    Example: `sk-1234567890abcdef` → `sk-***ef`
+  </Card>
+
+  <Card title="Local Option" icon="home">
+    Use **Ollama** for completely offline, local AI processing with no data leaving your machine.
+  </Card>
+
+  <Card title="API Key Storage" icon="key">
+    AI provider API keys are stored locally in `~/.envark/ai-config.json` with restricted permissions (600).
+  </Card>
+</CardGroup>
+
+## Provider Architecture
+
+The AI system uses a provider abstraction pattern:
+
+```typescript
+// From src/ai/provider.ts:59-94
+export abstract class AIProvider {
+    protected config: AIProviderConfig;
+    protected systemPrompt: string;
+
+    abstract chat(messages: AIMessage[], options?: AICompletionOptions): Promise<string>;
+    abstract stream(messages: AIMessage[], options?: AICompletionOptions): AsyncGenerator<AIStreamChunk>;
+    abstract isConfigured(): boolean;
+    abstract getName(): string;
+    abstract getModel(): string;
+
+    async analyzeEnvironment(context: EnvAnalysisContext): Promise<AIAnalysisResult> {
+        const prompt = this.buildAnalysisPrompt(context);
+        const response = await this.chat([
+            { role: 'system', content: this.systemPrompt },
+            { role: 'user', content: prompt }
+        ], { temperature: 0.3 });
+
+        return this.parseAnalysisResponse(response);
+    }
+
+    async suggestImprovements(variableName: string, context?: string): Promise<string[]> {
+        // Returns 3-5 actionable recommendations
+    }
+
+    async generateEnvTemplate(requirements: string): Promise<string> {
+        // Generates production-ready .env template
+    }
+
+    async generateValidationCode(variables: string[], language: string): Promise<string> {
+        // Creates type-safe validation code
+    }
+}
+```
+
+Each provider (OpenAI, Anthropic, Gemini, Ollama) implements this interface.
+
+## Conversation Management
+
+The AI agent maintains conversation history for context:
+
+```typescript
+// From src/ai/agent.ts:34-37
+export class AegisAIAgent {
+    private conversationHistory: ConversationMessage[] = [];
+    private maxHistoryLength: number = 20;
+}
+```
+
+**Features:**
+- Last 20 messages kept in memory
+- Automatic trimming of old messages
+- Context-aware responses
+- Clear history with `clearHistory()`
+
+## Programmatic Usage
+
+Use the AI assistant in your own tools:
+
+```typescript
+import { getAIAgent } from 'envark/ai/agent';
+
+const agent = getAIAgent();
+
+// Configure provider
+agent.configure({
+    provider: 'openai',
+    apiKey: process.env.OPENAI_API_KEY,
+    model: 'gpt-4o'
+});
+
+// Check configuration
+if (agent.isConfigured()) {
+    console.log(agent.getProviderInfo());
+    // { name: 'OpenAI', model: 'gpt-4o', configured: true }
+}
+
+// Chat
+const response = await agent.chat('How should I structure my .env files?');
+console.log(response);
+
+// Analyze environment
+const analysis = await agent.analyzeEnvironment({
+    variables: [
+        { name: 'DATABASE_URL', file: 'config.ts', line: 10, riskLevel: 'high' },
+        { name: 'API_KEY', file: 'api.ts', line: 5, riskLevel: 'critical' }
+    ],
+    projectPath: '/path/to/project',
+    language: 'typescript',
+    framework: 'next.js'
+});
+
+console.log(analysis.summary);
+console.log(analysis.recommendations);
+
+// Get suggestions
+const suggestions = await agent.suggestVariableImprovements('DATABASE_URL');
+sugestions.forEach(s => console.log(`- ${s}`));
+
+// Generate template
+const template = await agent.generateEnvTemplate('React SPA with REST API');
+console.log(template);
+```
+
+## Temperature Settings
+
+Different AI tasks use different temperature settings for optimal results:
+
+```typescript
+// From src/ai/provider.ts
+{ temperature: 0.3 }  // Environment analysis (precise)
+{ temperature: 0.5 }  // Suggestions (balanced)
+{ temperature: 0.4 }  // Template generation (structured)
+{ temperature: 0.2 }  // Validation code (deterministic)
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Choose the Right Provider" icon="brain">
+    - **OpenAI/Anthropic**: Best quality for complex analysis
+    - **Gemini**: Good balance of quality and cost
+    - **Ollama**: Privacy-focused, no API costs
+  </Card>
+
+  <Card title="Use Chat for Learning" icon="graduation-cap">
+    The `/chat` mode is excellent for:
+    - Learning best practices
+    - Understanding security concepts
+    - Debugging configuration issues
+  </Card>
+
+  <Card title="Combine with Scanning" icon="magnifying-glass-chart">
+    Use `/analyze` after `/scan` to get AI insights on detected issues.
+  </Card>
+
+  <Card title="Generate Templates Early" icon="file-code">
+    Use `/template` at project start to establish good patterns from the beginning.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="AI commands not available">
+    **Issue:** AI commands hidden or show "AI not configured"
+
+    **Solution:**
+    ```bash
+    envark
+    /ai-config
+    # Complete the setup wizard
+    ```
+
+    Or set environment variables:
+    ```bash
+    export OPENAI_API_KEY=sk-...
+    ```
+  </Accordion>
+
+  <Accordion title="API key errors">
+    **Issue:** "Invalid API key" or "Authentication failed"
+
+    **Solution:**
+    1. Verify your API key is correct
+    2. Check key hasn't expired
+    3. Ensure sufficient credits/quota
+    4. Reconfigure: `/ai-config`
+  </Accordion>
+
+  <Accordion title="Slow responses with Ollama">
+    **Issue:** Ollama responses take 10-30+ seconds
+
+    **Solution:**
+    - Use a smaller model (`phi3`, `mistral`)
+    - Ensure sufficient RAM (8GB+ recommended)
+    - Check CPU isn't throttled
+    - Consider cloud providers for faster responses
+  </Accordion>
+
+  <Accordion title="Configuration not persisting">
+    **Issue:** Have to reconfigure AI provider every session
+
+    **Solution:**
+    Check `~/.envark/ai-config.json` permissions:
+    ```bash
+    ls -la ~/.envark/ai-config.json
+    chmod 600 ~/.envark/ai-config.json
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Implementation Details
+
+The AI assistant is implemented across several modules:
+
+- **`src/ai/agent.ts`**: Main agent orchestration (lines 34-362)
+- **`src/ai/provider.ts`**: Abstract provider interface (lines 59-259)
+- **`src/ai/openai.ts`**: OpenAI implementation
+- **`src/ai/anthropic.ts`**: Anthropic Claude implementation
+- **`src/ai/gemini.ts`**: Google Gemini implementation
+- **`src/ai/ollama.ts`**: Ollama local implementation
+- **`src/ai/config.ts`**: Configuration persistence (lines 10-61)
+
+See `src/ai/agent.ts:34-362` for the complete AI agent implementation.

@@ -1,80 +1,593 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with Envark in minutes - from installation to your first comprehensive environment variable scan
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide walks you through scanning your first project with Envark, understanding the output, and taking action on discovered issues. You'll learn both the interactive TUI mode and direct CLI commands.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+This quickstart assumes you have Node.js 18+ installed. If not, see the [Installation](/installation) guide first.
 </Note>
+
+## Step 1: Run Your First Scan
+
+No installation needed - run Envark instantly with npx:
+
+```bash
+npx envark
+```
+
+This launches the interactive TUI (Terminal User Interface) in your current directory.
+
+<Tip>
+If you're in a project directory, Envark automatically scans it. If you're elsewhere, navigate to your project first with `cd /path/to/project`
+</Tip>
+
+### Expected Output
+
+You'll see the Envark banner and command prompt:
+
+```
+███████╗███╗   ██╗██╗   ██╗ █████╗ ██████╗ ██╗  ██╗
+██╔════╝████╗  ██║██║   ██║██╔══██╗██╔══██╗██║ ██╔╝
+█████╗  ██╔██╗ ██║██║   ██║███████║██████╔╝█████╔╝
+██╔══╝  ██║╚██╗██║╚██╗ ██╔╝██╔══██║██╔══██╗██╔═██╗
+███████╗██║ ╚████║ ╚████╔╝ ██║  ██║██║  ██║██║  ██╗
+╚══════╝╚═╝  ╚═══╝  ╚═══╝  ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
+
+Environment Variable Guardian v0.1.1
+
+Type / to open command menu, or 'help' for available commands
+
+> _
+```
+
+## Step 2: Open the Command Menu
+
+Type `/` (forward slash) to open the dropdown command menu:
+
+```
+> /
+
+┌─ Commands ────────────────────────────────────┐
+│ scan          Scan project for env variables  │
+│ risk          Analyze environment risks       │
+│ missing       Find undefined variables        │
+│ duplicates    Find duplicate definitions      │
+│ undocumented  Find undocumented variables     │
+│ validate      Validate a .env file            │
+│ generate      Generate .env.example           │
+│ graph         Show dependency graph           │
+│ help          Show help                       │
+│ clear         Clear output                    │
+│ exit          Exit Envark                     │
+└───────────────────────────────────────────────┘
+```
+
+<Steps>
+  <Step title="Navigate with arrow keys">
+    Use ↓ and ↑ to highlight commands
+  </Step>
+  
+  <Step title="Autocomplete with Tab">
+    Press `Tab` to insert the selected command
+  </Step>
+  
+  <Step title="Execute with Enter">
+    Press `Enter` to run the command immediately
+  </Step>
+</Steps>
+
+## Step 3: Run a Complete Scan
+
+Select the `scan` command or type it manually:
+
+```bash
+> /scan
+```
+
+Envark scans your entire project:
+
+```
+⠋ Scanning project...
+```
+
+### Scan Results Example
+
+After scanning completes (typically under 2 seconds for most projects):
+
+```
+✓ Scan complete (1.2s)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PROJECT SCAN RESULTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 Summary
+  Total Variables:    24
+  Defined:            20
+  Used in Code:       22
+  Missing:            3  ⚠️
+  Undocumented:       5
+  Dead (unused):      2
+
+🔴 Critical Issues:    2
+🟡 High Issues:        1
+🟠 Medium Issues:      5
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Scanned 127 files in /home/user/my-project
+Cache: MISS (first scan)
+
+Next steps:
+  • Run '/risk' to see detailed risk analysis
+  • Run '/missing' to fix critical issues
+  • Run '/validate .env' to check your env file
+```
+
+<Warning>
+**Critical issues** mean variables used in your code are not defined anywhere. These will cause runtime crashes!
+</Warning>
+
+## Step 4: Analyze Critical Risks
+
+To see which variables will cause crashes, run:
+
+```bash
+> /missing
+```
+
+### Missing Variables Output
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MISSING ENVIRONMENT VARIABLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+These variables are used in code but not defined:
+
+🔴 STRIPE_SECRET_KEY
+   Used in: src/payments/stripe.ts:12
+            src/webhooks/stripe.ts:45
+   Risk: CRITICAL - No default value
+   → Add to .env file immediately
+
+🔴 JWT_SECRET  
+   Used in: src/auth/jwt.ts:8
+   Risk: CRITICAL - No default value
+   → Required for authentication
+
+🟡 REDIS_URL
+   Used in: src/cache/redis.ts:15
+   Risk: HIGH - Has fallback to localhost
+   → Will use localhost:6379 in development
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Found 3 missing variables (2 critical, 1 high)
+
+⚠️  These will cause runtime errors if not fixed!
+```
+
+## Step 5: View Detailed Risk Analysis
+
+For a complete risk breakdown, run:
+
+```bash
+> /risk
+```
+
+Or filter by severity:
+
+```bash
+> /risk critical
+> /risk high
+```
+
+### Risk Analysis Output
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ENVIRONMENT VARIABLE RISK ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔴 CRITICAL (2)
+
+STRIPE_SECRET_KEY
+  ❌ Used but not defined (no default)
+  📍 src/payments/stripe.ts:12
+  💡 Add to .env: STRIPE_SECRET_KEY=your-key-here
+
+JWT_SECRET
+  ❌ Used but not defined (no default)
+  📍 src/auth/jwt.ts:8
+  💡 Generate with: openssl rand -hex 32
+
+🟡 HIGH (1)
+
+API_KEY
+  ⚠️  Secret-like name found in config.js
+  📍 src/config.js:5 - const API_KEY = "hardcoded"
+  💡 Move to .env and use process.env.API_KEY
+
+🟠 MEDIUM (5)
+
+DATABASE_URL
+  ⚠️  Used 8 times across 4 files
+  ⚠️  No default value
+  📍 src/db/connection.ts, src/migrations/run.ts...
+  💡 Add default or ensure .env has this value
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Total Issues: 8
+Run '/missing' for detailed remediation steps
+```
+
+<Tip>
+Envark assigns risk levels using `src/core/analyzer.ts` based on usage patterns, definition status, and secret detection heuristics.
+</Tip>
+
+## Step 6: Fix Critical Issues
+
+Create or update your `.env` file with missing variables:
+
+```bash .env
+# Payment Processing
+STRIPE_SECRET_KEY=sk_test_your_stripe_key_here
+
+# Authentication
+JWT_SECRET=generated-secret-from-openssl-rand
+
+# Database
+DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
+
+# Cache (optional - has default)
+REDIS_URL=redis://localhost:6379
+```
+
+<Warning>
+**Never commit your `.env` file!** Add it to `.gitignore`:
+
+```bash .gitignore
+.env
+.env.local
+.env.*.local
+```
+</Warning>
+
+## Step 7: Validate Your Environment
+
+After creating your `.env` file, validate it against your code:
+
+```bash
+> /validate .env
+```
+
+### Validation Output
+
+```
+✓ Validating .env...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ VALIDATION RESULTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ PASSED (20 variables)
+  PORT, NODE_ENV, DATABASE_URL, STRIPE_SECRET_KEY...
+
+❌ FAILED (2 variables)
+
+JWT_SECRET
+  Issue: Missing from .env
+  Used in: src/auth/jwt.ts:8
+  Required: YES
+
+API_ENDPOINT
+  Issue: Missing from .env  
+  Used in: src/api/client.ts:15
+  Required: YES
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  2 required variables are missing
+```
+
+## Step 8: Generate Documentation
+
+Create a `.env.example` template for your team:
+
+```bash
+> /generate
+```
+
+This creates `.env.example` with all discovered variables:
+
+```bash .env.example
+# Auto-generated by Envark
+# Copy to .env and fill in your values
+
+# Database Configuration
+DATABASE_URL=postgresql://user:pass@localhost:5432/dbname
+
+# Authentication
+JWT_SECRET=your-secret-here
+
+# Payment Processing  
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLIC_KEY=pk_test_...
+
+# API Configuration
+API_ENDPOINT=https://api.example.com
+API_TIMEOUT=5000
+
+# Server Settings
+PORT=3000
+NODE_ENV=development
+
+# Redis Cache
+REDIS_URL=redis://localhost:6379
+```
+
+<Tip>
+Commit `.env.example` to version control so new developers know which variables to configure.
+</Tip>
+
+## Direct CLI Commands
+
+You can skip the TUI and run commands directly:
+
+<CodeGroup>
+```bash Scan Project
+npx envark scan
+```
+
+```bash Risk Analysis
+npx envark risk critical
+```
+
+```bash Find Missing
+npx envark missing
+```
+
+```bash Validate File
+npx envark validate .env.production
+```
+
+```bash Generate Template
+npx envark generate
+```
+
+```bash Find Duplicates
+npx envark duplicates
+```
+</CodeGroup>
+
+### CLI Examples with Output
+
+```bash
+$ npx envark scan
+
+⠋ Scanning project...
+✓ Scan complete (1.2s)
+
+Project: /home/user/my-project
+Scanned: 127 files (45 source, 3 env files)
+
+Variables: 24 total
+  • 20 defined
+  • 22 used
+  • 3 missing ⚠️
+  • 5 undocumented
+
+Risk Summary:
+  🔴 Critical: 2
+  🟡 High: 1
+  🟠 Medium: 5
+
+Run 'envark risk' for details
+```
+
+## Using MCP Tools Programmatically
+
+When Envark is configured as an MCP server, AI assistants can call these tools:
+
+### get_env_map Example
+
+```json
+{
+  "name": "get_env_map",
+  "arguments": {
+    "projectPath": "/home/user/my-project",
+    "filter": "missing"
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "summary": {
+    "totalEnvVars": 24,
+    "defined": 20,
+    "used": 22,
+    "missing": 3,
+    "undocumented": 5,
+    "dead": 2,
+    "critical": 2
+  },
+  "variables": [
+    {
+      "name": "STRIPE_SECRET_KEY",
+      "definedIn": [],
+      "usedIn": ["src/payments/stripe.ts"],
+      "languages": ["typescript"],
+      "hasDefault": false,
+      "isDocumented": false,
+      "riskLevel": "critical",
+      "issueCount": 1
+    }
+  ],
+  "metadata": {
+    "projectPath": "/home/user/my-project",
+    "scannedFiles": 127,
+    "cacheHit": false,
+    "duration": 1243
+  }
+}
+```
+
+### get_env_risk Example
+
+```json
+{
+  "name": "get_env_risk",
+  "arguments": {
+    "minRisk": "high"
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "summary": {
+    "critical": 2,
+    "high": 1,
+    "medium": 5,
+    "low": 8,
+    "info": 8
+  },
+  "riskReport": [
+    {
+      "name": "STRIPE_SECRET_KEY",
+      "riskLevel": "critical",
+      "issues": [
+        {
+          "type": "MISSING",
+          "severity": "critical",
+          "message": "Used in code but not defined",
+          "recommendation": "Add STRIPE_SECRET_KEY to your .env file"
+        }
+      ],
+      "usageCount": 2,
+      "files": ["src/payments/stripe.ts", "src/webhooks/stripe.ts"]
+    }
+  ],
+  "metadata": {
+    "projectPath": "/home/user/my-project",
+    "scannedFiles": 127,
+    "cacheHit": true,
+    "duration": 45
+  }
+}
+```
+
+<Note>
+Notice the second request used cache (`"cacheHit": true`) and completed in 45ms vs 1243ms. Envark caches results in `.envark/cache.json` until files change.
+</Note>
+
+## Performance & Caching
+
+Envark is optimized for speed:
+
+- **First scan**: 1-2 seconds for 500-file projects
+- **Cached scans**: Under 100ms
+- **Cache invalidation**: Automatic when files change
+
+Cache location:
+
+```bash
+.envark/
+  └── cache.json    # Scan results with file hashes
+```
+
+<Tip>
+Add `.envark/` to `.gitignore` to keep cache files local:
+
+```bash .gitignore
+.envark/
+```
+</Tip>
+
+## Common Workflows
+
+### Pre-Commit Hook
+
+Add to `.husky/pre-commit`:
+
+```bash
+#!/bin/sh
+npx envark risk critical
+if [ $? -ne 0 ]; then
+  echo "❌ Critical environment variable issues detected!"
+  exit 1
+fi
+```
+
+### CI/CD Pipeline
+
+Add to `.github/workflows/env-check.yml`:
+
+```yaml
+name: Environment Check
+
+on: [push, pull_request]
+
+jobs:
+  env-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Check environment variables
+        run: |
+          npx envark risk critical
+          npx envark validate .env.example
+```
+
+### Team Onboarding Script
+
+```bash setup.sh
+#!/bin/bash
+set -e
+
+echo "Setting up project environment..."
+
+# Generate .env from template
+if [ ! -f .env ]; then
+  cp .env.example .env
+  echo "✓ Created .env from template"
+fi
+
+# Validate environment
+echo "Checking environment variables..."
+npx envark validate .env
+
+echo "✓ Environment setup complete!"
+```
+
+## Next Steps
+
+Now that you've completed the quickstart:
+
+<CardGroup cols={3}>
+  <Card title="CLI Reference" icon="terminal" href="/cli/commands">
+    Complete command documentation
+  </Card>
+  
+  <Card title="MCP Integration" icon="plug" href="/mcp/overview">
+    Connect Envark to your IDE
+  </Card>
+  
+  <Card title="Advanced Features" icon="wand-magic-sparkles" href="/features/ai-assistant">
+    AI assistant, graphs, and more
+  </Card>
+</CardGroup>

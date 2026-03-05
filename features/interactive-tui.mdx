@@ -1,0 +1,457 @@
+---
+title: Interactive TUI
+description: Explore Envark's powerful terminal user interface with command shortcuts, AI chat mode, and provider configuration wizard
+---
+
+## Overview
+
+Envark features a sophisticated React/Ink-powered Terminal User Interface (TUI) that provides an interactive environment for managing your environment variables. The TUI supports multiple modes, intelligent command completion, and real-time feedback.
+
+## Starting the TUI
+
+```bash
+envark
+```
+
+This launches the interactive terminal interface with:
+- ASCII banner and version information
+- Command input with autocomplete
+- Real-time scanning feedback
+- Color-coded output
+
+## UI Modes
+
+The TUI operates in three distinct modes:
+
+<Tabs>
+  <Tab title="Normal Mode">
+    **Normal Mode** is the default interface for running commands and viewing results.
+
+    Features:
+    - Command dropdown with fuzzy matching
+    - Keyboard shortcuts for all commands
+    - Tab completion
+    - Command history
+
+    ```bash
+    # Type / to see all available commands
+    /scan
+
+    # Use shortcuts for faster access
+    s        # Same as /scan
+    r        # Same as /risk
+    m        # Same as /missing
+    ```
+  </Tab>
+
+  <Tab title="Config Wizard">
+    **Config Wizard** provides a step-by-step interface for setting up AI providers.
+
+    Trigger with:
+    ```bash
+    /ai-config
+    # or
+    cfg
+    ```
+
+    The wizard guides you through:
+    1. **Provider Selection** - Choose from OpenAI, Anthropic, Gemini, or Ollama
+    2. **API Key Entry** - Secure input for your API credentials (skipped for Ollama)
+    3. **Model Selection** - Pick from provider-specific models
+
+    <Note>
+    Configurations are persisted to `~/.envark/ai-config.json` and automatically loaded on restart.
+    </Note>
+  </Tab>
+
+  <Tab title="Chat Mode">
+    **Chat Mode** provides an interactive AI assistant for environment variable questions.
+
+    Enter chat mode:
+    ```bash
+    /chat
+    # or
+    ch
+    ```
+
+    Features:
+    - Conversational interface with message history
+    - Context-aware responses about your project
+    - Last 8 messages visible on screen
+    - Type `/exit` to return to normal mode
+
+    Example session:
+    ```
+    You: What's the difference between .env and .env.local?
+
+     AI: .env is typically committed to version control and contains
+         default/example values, while .env.local is git-ignored and
+         contains your actual local development secrets...
+
+    You: Should I commit my API keys?
+
+     AI: No, never commit API keys or secrets to version control...
+    ```
+  </Tab>
+</Tabs>
+
+## Available Commands
+
+### Scanning Commands
+
+<CardGroup cols={2}>
+  <Card title="/scan" icon="magnifying-glass">
+    **Shortcut:** `s`
+
+    Scan project for all environment variables
+
+    ```bash
+    /scan
+    ```
+
+    Displays:
+    - Total variables found
+    - Defined vs missing counts
+    - Critical issues summary
+    - Top 10 variables with status
+  </Card>
+
+  <Card title="/risk" icon="triangle-exclamation">
+    **Shortcut:** `r`
+
+    Analyze security and configuration risks
+
+    ```bash
+    /risk
+    ```
+
+    Shows risk breakdown:
+    - Critical, High, Medium, Low counts
+    - Top risky variables
+    - Issue details and recommendations
+  </Card>
+
+  <Card title="/missing" icon="xmark">
+    **Shortcut:** `m`
+
+    Find undefined but used variables
+
+    ```bash
+    /missing
+    ```
+
+    Identifies variables that:
+    - Are referenced in code
+    - Have no definition in .env files
+    - Have no default values
+  </Card>
+
+  <Card title="/duplicates" icon="copy">
+    **Shortcut:** `d`
+
+    Find duplicate or conflicting definitions
+
+    ```bash
+    /duplicates
+    ```
+  </Card>
+</CardGroup>
+
+### Validation Commands
+
+```bash
+# Validate a .env file
+/validate .env
+v .env
+
+# Generate .env.example template
+/generate
+g
+
+# Show dependency graph
+/graph
+gr
+```
+
+### AI Commands
+
+<Note>
+AI commands require an AI provider to be configured. Use `/ai-config` to set one up.
+</Note>
+
+<Accordion title="AI Command Reference">
+  <AccordionGroup>
+    <Accordion title="/chat - Interactive Chat Mode">
+      **Shortcut:** `ch`
+
+      Start an interactive conversation with the AI assistant.
+
+      ```bash
+      /chat
+      ```
+
+      The AI assistant can:
+      - Answer questions about environment variables
+      - Explain best practices
+      - Help debug configuration issues
+      - Provide framework-specific advice
+    </Accordion>
+
+    <Accordion title="/ask - Quick Question">
+      **Shortcut:** `a`
+
+      Ask a one-off question without entering chat mode.
+
+      ```bash
+      /ask How do I secure my database password?
+      a What's a good naming convention for API keys?
+      ```
+    </Accordion>
+
+    <Accordion title="/analyze - Environment Analysis">
+      **Shortcut:** `an`
+
+      Get AI-powered analysis of your entire environment configuration.
+
+      ```bash
+      /analyze
+      ```
+
+      Returns:
+      - Summary of findings
+      - Security recommendations
+      - Best practice suggestions
+    </Accordion>
+
+    <Accordion title="/suggest - Variable Improvements">
+      **Shortcut:** `su`
+
+      Get suggestions for improving a specific variable.
+
+      ```bash
+      /suggest DATABASE_URL
+      su API_KEY
+      ```
+    </Accordion>
+
+    <Accordion title="/explain - Variable Documentation">
+      **Shortcut:** `ex`
+
+      Get detailed explanation about an environment variable.
+
+      ```bash
+      /explain NODE_ENV
+      ex PORT
+      ```
+    </Accordion>
+
+    <Accordion title="/template - Generate Template">
+      **Shortcut:** `tpl`
+
+      Generate a .env template for your project type.
+
+      ```bash
+      /template Node.js web application
+      tpl Next.js app with authentication
+      ```
+    </Accordion>
+  </AccordionGroup>
+</Accordion>
+
+### Utility Commands
+
+```bash
+/help              # Show all commands
+h
+
+/clear             # Clear the output
+c
+
+/exit              # Exit Envark
+q
+```
+
+## Keyboard Navigation
+
+<CardGroup cols={2}>
+  <Card title="Arrow Keys">
+    - **↑/↓** - Navigate command dropdown
+    - **↑/↓** - Navigate provider/model selection in wizard
+  </Card>
+
+  <Card title="Special Keys">
+    - **Enter** - Execute command or select option
+    - **Tab** - Autocomplete selected command
+    - **Ctrl+C** - Cancel/Clear/Exit
+    - **Backspace** - Delete character
+  </Card>
+</CardGroup>
+
+## Command Dropdown
+
+As you type `/` followed by letters, Envark shows a filtered dropdown of matching commands:
+
+```bash
+# Typing /s shows:
+▸ /scan         – Scan project for environment variables
+  /suggest      – Get AI suggestions for a variable
+
+# Typing /ri shows:
+▸ /risk         – Analyze environment variable risks
+```
+
+<Note>
+The dropdown automatically hides AI commands if no provider is configured.
+</Note>
+
+## Output Formatting
+
+Envark provides structured, color-coded output:
+
+### Scan Results
+
+```
+┌─ SCAN SUMMARY ────────────────────────────────────────────┐
+│  Total: 42  Defined: 38  Missing: 4  Critical: 2
+└──────────────────────────────────────────────────────────┘
+
+Variables:
+  DATABASE_URL              [CRITICAL] ✓
+  API_KEY                   [HIGH] ✗
+  PORT                      [LOW] ✓
+  ...
+```
+
+### Risk Analysis
+
+```
+┌─ RISK ANALYSIS ───────────────────────────────────────────┐
+│  Critical: 2  High: 5  Medium: 12  Low: 23
+└──────────────────────────────────────────────────────────┘
+
+  ⚠ SECRET_KEY [CRITICAL]
+    → Used in code but not defined in any .env file
+    → Looks like a secret but is in a potentially committed file
+```
+
+### Validation Results
+
+```
+┌─ VALIDATION ──────────────────────────────────────────────┐
+│  Status: ✗ INVALID
+│  Passed: 35  Warnings: 3  Failed: 4
+└──────────────────────────────────────────────────────────┘
+```
+
+## Status Footer
+
+The footer displays:
+- Current Envark version
+- AI provider status (provider/model or "Not configured")
+- Current mode indicator
+- Keyboard hints
+
+```
+~ | Envark v0.1.0 | AI: OpenAI/gpt-4o | CHAT MODE    [Ctrl+C] Cancel
+```
+
+## AI Provider Configuration
+
+Envark supports multiple AI providers with easy setup:
+
+<Tabs>
+  <Tab title="OpenAI">
+    **Models Available:**
+    - gpt-4o
+    - gpt-4-turbo
+    - gpt-4
+    - gpt-3.5-turbo
+
+    ```bash
+    /ai-config
+    # Select OpenAI
+    # Enter API key
+    # Choose model
+    ```
+  </Tab>
+
+  <Tab title="Anthropic">
+    **Models Available:**
+    - claude-sonnet-4-20250514
+    - claude-3-5-sonnet-20241022
+    - claude-3-opus-20240229
+
+    ```bash
+    /ai-config
+    # Select Anthropic
+    # Enter API key
+    # Choose model
+    ```
+  </Tab>
+
+  <Tab title="Google Gemini">
+    **Models Available:**
+    - gemini-2.0-flash
+    - gemini-1.5-pro
+    - gemini-1.5-flash
+    - gemini-pro
+
+    ```bash
+    /ai-config
+    # Select Google Gemini
+    # Enter API key
+    # Choose model
+    ```
+  </Tab>
+
+  <Tab title="Ollama (Local)">
+    **Models Available:**
+    - llama3.2
+    - llama3.1
+    - mistral
+    - codellama
+    - phi3
+
+    ```bash
+    /ai-config
+    # Select Ollama (Local)
+    # Press Enter (no API key needed)
+    # Choose model
+    ```
+
+    <Warning>
+    Requires Ollama to be installed and running locally. [Install Ollama](https://ollama.ai)
+    </Warning>
+  </Tab>
+</Tabs>
+
+## Tips and Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Shortcuts" icon="bolt">
+    Learn the single-letter shortcuts (`s`, `r`, `m`, etc.) for faster workflow.
+  </Card>
+
+  <Card title="Tab Completion" icon="keyboard">
+    Press Tab to autocomplete commands from the dropdown instead of typing the full name.
+  </Card>
+
+  <Card title="Chat for Learning" icon="comments">
+    Use `/chat` mode to learn about environment variable best practices interactively.
+  </Card>
+
+  <Card title="Clear Often" icon="broom">
+    Use `/clear` or `c` to clean up the output and keep your terminal focused.
+  </Card>
+</CardGroup>
+
+## Architecture
+
+The TUI is built with:
+- **React** - Component-based UI structure
+- **Ink** - React renderer for terminal interfaces
+- **Three UI Modes** - Normal, Config Wizard, Chat
+- **Real-time State Management** - React hooks for responsive UI
+- **Persistent Configuration** - AI settings saved to ~/.envark/
+
+See the implementation in `src/cli/app.tsx:1-724`.

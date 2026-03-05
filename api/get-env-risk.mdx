@@ -1,0 +1,201 @@
+---
+title: "get_env_risk"
+description: "Returns environment variables sorted by risk score with detailed issue explanations"
+---
+
+## Overview
+
+The `get_env_risk` tool analyzes all environment variables and returns them sorted by risk level, with detailed explanations of each issue and specific recommended fixes.
+
+## Parameters
+
+<ParamField path="projectPath" type="string" optional>
+  Path to the project directory. Defaults to current working directory.
+</ParamField>
+
+<ParamField path="minRisk" type="string" optional>
+  Minimum risk level to include. Defaults to "info" (show all).
+  
+  **Options:**
+  - `info` - Show all variables (default)
+  - `low` - Low risk and above
+  - `medium` - Medium risk and above
+  - `high` - High risk and above
+  - `critical` - Only critical risk variables
+</ParamField>
+
+## Response
+
+<ResponseField name="summary" type="object" required>
+  Count of variables by risk level
+  
+  <Expandable title="properties">
+    <ResponseField name="critical" type="number">
+      Number of critical risk variables
+    </ResponseField>
+    <ResponseField name="high" type="number">
+      Number of high risk variables
+    </ResponseField>
+    <ResponseField name="medium" type="number">
+      Number of medium risk variables
+    </ResponseField>
+    <ResponseField name="low" type="number">
+      Number of low risk variables
+    </ResponseField>
+    <ResponseField name="info" type="number">
+      Number of info level variables
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="riskReport" type="array" required>
+  Detailed risk report for each variable
+  
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">
+      Variable name
+    </ResponseField>
+    <ResponseField name="riskLevel" type="string">
+      Risk level: critical, high, medium, low, or info
+    </ResponseField>
+    <ResponseField name="issues" type="array">
+      Array of detected issues
+      
+      <Expandable title="issue object">
+        <ResponseField name="type" type="string">
+          Issue type (e.g., MISSING, DEAD, UNDOCUMENTED)
+        </ResponseField>
+        <ResponseField name="severity" type="string">
+          Severity level
+        </ResponseField>
+        <ResponseField name="message" type="string">
+          Human-readable issue description
+        </ResponseField>
+        <ResponseField name="recommendation" type="string">
+          Specific recommended fix
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="usageCount" type="number">
+      Number of times this variable is used
+    </ResponseField>
+    <ResponseField name="files" type="string[]">
+      Files using this variable (limited to first 5)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  Scan metadata
+  
+  <Expandable title="properties">
+    <ResponseField name="projectPath" type="string">
+      Absolute path to the scanned project
+    </ResponseField>
+    <ResponseField name="scannedFiles" type="number">
+      Number of files scanned
+    </ResponseField>
+    <ResponseField name="cacheHit" type="boolean">
+      Whether the scan used cached results
+    </ResponseField>
+    <ResponseField name="duration" type="number">
+      Scan duration in milliseconds
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Response
+
+```json
+{
+  "summary": {
+    "critical": 2,
+    "high": 5,
+    "medium": 8,
+    "low": 12,
+    "info": 15
+  },
+  "riskReport": [
+    {
+      "name": "API_KEY",
+      "riskLevel": "critical",
+      "issues": [
+        {
+          "type": "MISSING",
+          "severity": "critical",
+          "message": "Variable used in code but not defined anywhere and has no default value",
+          "recommendation": "Add API_KEY to your .env file with a valid value"
+        },
+        {
+          "type": "UNDOCUMENTED",
+          "severity": "high",
+          "message": "Variable not documented in .env.example",
+          "recommendation": "Add API_KEY to .env.example with a description"
+        }
+      ],
+      "usageCount": 8,
+      "files": [
+        "src/api/client.ts",
+        "src/services/external-api.ts",
+        "src/middleware/auth.ts"
+      ]
+    },
+    {
+      "name": "DATABASE_URL",
+      "riskLevel": "high",
+      "issues": [
+        {
+          "type": "UNDOCUMENTED",
+          "severity": "medium",
+          "message": "Variable not documented in .env.example",
+          "recommendation": "Add DATABASE_URL to .env.example with usage instructions"
+        }
+      ],
+      "usageCount": 12,
+      "files": [
+        "src/db/connection.ts",
+        "src/config/database.ts"
+      ]
+    }
+  ],
+  "metadata": {
+    "projectPath": "/Users/dev/my-project",
+    "scannedFiles": 156,
+    "cacheHit": false,
+    "duration": 245
+  }
+}
+```
+
+## Usage Example
+
+AI assistants can call this tool to identify and fix risky environment variables:
+
+```json
+{
+  "name": "get_env_risk",
+  "arguments": {
+    "projectPath": "/path/to/project",
+    "minRisk": "high"
+  }
+}
+```
+
+To see only critical issues:
+
+```json
+{
+  "name": "get_env_risk",
+  "arguments": {
+    "minRisk": "critical"
+  }
+}
+```
+
+## Use Cases
+
+- **Security Audit**: Identify critical security issues with environment variables
+- **Pre-Deployment**: Check for risky configurations before deploying
+- **Issue Prioritization**: Focus on fixing high and critical issues first
+- **Code Review**: Automated checking of environment variable usage
+- **Documentation**: Get specific recommendations for documenting variables

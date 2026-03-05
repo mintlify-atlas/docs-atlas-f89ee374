@@ -1,0 +1,767 @@
+---
+title: Best Practices
+description: Recommended patterns and workflows for managing environment variables with Envark
+---
+
+Follow these best practices to maintain secure, reliable, and well-documented environment variable configurations across your projects.
+
+## File Organization
+
+### The Three-File Strategy
+
+<Steps>
+  <Step title=".env - Local Secrets (Never Commit)">
+    Contains actual secrets and local configuration.
+    
+    ```bash
+    # .env - DO NOT COMMIT
+    DATABASE_URL=postgres://user:pass@localhost/mydb
+    API_SECRET_KEY=abc123xyz789
+    STRIPE_SECRET_KEY=sk_test_...
+    ```
+    
+    ✅ Add to `.gitignore`:  
+    ```bash
+    .env
+    .env.local
+    .env.*.local
+    ```
+  </Step>
+  
+  <Step title=".env.example - Template (Commit This)">
+    Documents all required variables without real values.
+    
+    ```bash
+    # .env.example - COMMIT THIS
+    # Database connection string
+    DATABASE_URL=postgres://user:password@host:5432/database
+    
+    # API secret key for JWT signing
+    API_SECRET_KEY=your-secret-key-here
+    
+    # Stripe API key (get from dashboard)
+    STRIPE_SECRET_KEY=sk_test_...
+    ```
+    
+    ✅ Commit to version control  
+    ✅ Include comments explaining each variable  
+    ✅ Use placeholder values
+  </Step>
+  
+  <Step title=".env.defaults - Application Defaults (Optional)">
+    Safe defaults that work for development.
+    
+    ```bash
+    # .env.defaults - Optional, can commit
+    NODE_ENV=development
+    PORT=3000
+    LOG_LEVEL=debug
+    CACHE_ENABLED=false
+    ```
+    
+    ✅ Can be committed safely  
+    ✅ Overridden by `.env`  
+    ✅ No secrets
+  </Step>
+</Steps>
+
+---
+
+## Naming Conventions
+
+### Standard Format
+
+<Check>
+  Use `SCREAMING_SNAKE_CASE` for all environment variables.
+</Check>
+
+```bash
+# ✅ Good
+DATABASE_URL
+API_SECRET_KEY
+MAX_UPLOAD_SIZE
+REDIS_CACHE_TTL
+
+# ❌ Bad
+database_url
+ApiSecretKey
+max-upload-size
+```
+
+### Naming Structure
+
+Organize variables with prefixes:
+
+```bash
+# Database
+DATABASE_URL
+DATABASE_POOL_SIZE
+DATABASE_SSL_ENABLED
+
+# Redis  
+REDIS_HOST
+REDIS_PORT
+REDIS_PASSWORD
+
+# AWS
+AWS_REGION
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+
+# Feature flags
+FEATURE_NEW_DASHBOARD
+FEATURE_BETA_API
+```
+
+<Info>
+  Consistent prefixes make variables easier to find and group.
+</Info>
+
+---
+
+## Secret Management
+
+### Identifying Secrets
+
+Envark automatically detects variables that look like secrets:
+
+```regex
+/SECRET/i
+/PASSWORD/i
+/PASS$/i
+/TOKEN/i
+/KEY$/i
+/API_KEY/i
+/PRIVATE/i
+/CREDENTIAL/i
+/AUTH/i
+```
+
+### Secret Storage Rules
+
+<Warning>
+  **Never commit secrets to version control.**
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="Development" icon="laptop-code">
+    Store in `.env` (gitignored)
+    
+    ```bash
+    # .env
+    API_SECRET_KEY=abc123
+    ```
+  </Card>
+  
+  <Card title="Production" icon="server">
+    Use environment-specific solutions:
+    
+    - AWS Secrets Manager
+    - HashiCorp Vault
+    - Kubernetes Secrets
+    - Platform environment variables (Vercel, Heroku, etc.)
+  </Card>
+</CardGroup>
+
+### Secret Rotation
+
+```bash
+# .env.example - Document rotation schedule
+# Database password (rotate monthly)
+DATABASE_PASSWORD=
+
+# API key (rotate on team member changes)
+API_KEY=
+
+# JWT secret (rotate quarterly)
+JWT_SECRET=
+```
+
+---
+
+## Default Values
+
+### When to Provide Defaults
+
+<Tabs>
+  <Tab title="✅ Good Candidates">
+    ```javascript
+    // Non-critical configuration
+    const port = process.env.PORT || 3000;
+    const logLevel = process.env.LOG_LEVEL || 'info';
+    const cacheEnabled = process.env.CACHE_ENABLED || 'true';
+    const timeout = process.env.REQUEST_TIMEOUT || '30000';
+    ```
+    
+    Good for:
+    - Server ports
+    - Log levels
+    - Timeouts
+    - Feature flags
+    - Performance tuning
+  </Tab>
+  
+  <Tab title="❌ Never Provide Defaults">
+    ```javascript
+    // ❌ BAD - Critical values should fail loudly
+    const dbUrl = process.env.DATABASE_URL || 'postgres://localhost/db';
+    const apiKey = process.env.API_KEY || 'default-key';
+    const jwtSecret = process.env.JWT_SECRET || 'secret';
+    ```
+    
+    Never default:
+    - Database URLs
+    - API keys
+    - Secrets
+    - Production hostnames
+  </Tab>
+</Tabs>
+
+### Language-Specific Patterns
+
+<AccordionGroup>
+  <Accordion title="JavaScript/TypeScript">
+    
+```javascript
+// ✅ Using || operator
+const port = process.env.PORT || 3000;
+
+// ✅ Using ?? (nullish coalescing)
+const timeout = process.env.TIMEOUT ?? 5000;
+
+// ✅ Type conversion with default
+const maxRetries = parseInt(process.env.MAX_RETRIES || '3', 10);
+
+// ❌ Avoid for required variables
+const apiKey = process.env.API_KEY || 'missing';
+```
+
+  </Accordion>
+  
+  <Accordion title="Python">
+    
+```python
+import os
+
+# ✅ Using get() with default
+port = int(os.getenv('PORT', '8000'))
+log_level = os.getenv('LOG_LEVEL', 'INFO')
+
+# ✅ Using environ.get()
+debug = os.environ.get('DEBUG', 'false').lower() == 'true'
+
+# ❌ Avoid for secrets
+api_key = os.getenv('API_KEY', 'default')
+```
+
+  </Accordion>
+  
+  <Accordion title="Go">
+    
+```go
+import "os"
+
+// ✅ With fallback
+port := os.Getenv("PORT")
+if port == "" {
+    port = "8080"
+}
+
+// ✅ Using LookupEnv for required
+apiKey, exists := os.LookupEnv("API_KEY")
+if !exists {
+    log.Fatal("API_KEY is required")
+}
+```
+
+  </Accordion>
+  
+  <Accordion title="Rust">
+    
+```rust
+use std::env;
+
+// ✅ With unwrap_or
+let port = env::var("PORT")
+    .unwrap_or_else(|_| String::from("8080"));
+
+// ✅ With unwrap_or_default
+let debug = env::var("DEBUG")
+    .unwrap_or_default();
+
+// ✅ Explicit error for required
+let api_key = env::var("API_KEY")
+    .expect("API_KEY must be set");
+```
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Documentation
+
+### Inline Comments in .env.example
+
+```bash
+# .env.example
+
+# ============================================
+# Database Configuration
+# ============================================
+
+# PostgreSQL connection string
+# Format: postgres://user:password@host:port/database
+# Example: postgres://admin:secret@localhost:5432/myapp
+DATABASE_URL=postgres://user:password@localhost:5432/dbname
+
+# Database connection pool size (recommended: 10-20)
+DATABASE_POOL_SIZE=10
+
+# Enable SSL for database connections (production: true)
+DATABASE_SSL=false
+
+# ============================================
+# External APIs
+# ============================================
+
+# Stripe API key
+# Get from: https://dashboard.stripe.com/apikeys
+# Use test key (sk_test_...) in development
+STRIPE_SECRET_KEY=sk_test_...
+
+# SendGrid API key for email delivery
+# Docs: https://docs.sendgrid.com/api-reference
+SENDGRID_API_KEY=SG...
+
+# ============================================
+# Application Settings
+# ============================================
+
+# Environment (development | staging | production)
+NODE_ENV=development
+
+# Server port
+PORT=3000
+
+# Log level (debug | info | warn | error)
+LOG_LEVEL=debug
+```
+
+### README.md Section
+
+```markdown
+## Environment Variables
+
+This project uses environment variables for configuration.
+
+### Setup
+
+1. Copy the example file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Fill in required values:
+   - `DATABASE_URL` - PostgreSQL connection string
+   - `API_SECRET_KEY` - Generate with `openssl rand -hex 32`
+   - `STRIPE_SECRET_KEY` - Get from Stripe dashboard
+
+3. Run Envark to verify:
+   ```bash
+   npx envark analyze
+   ```
+
+### Required Variables
+
+| Variable | Description | Example |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection | `postgres://localhost/db` |
+| `API_SECRET_KEY` | JWT signing key | (generate random) |
+| `STRIPE_SECRET_KEY` | Stripe API key | `sk_test_...` |
+
+### Optional Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3000` | Server port |
+| `LOG_LEVEL` | `info` | Logging verbosity |
+| `CACHE_ENABLED` | `true` | Enable Redis cache |
+```
+
+---
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+# .github/workflows/envark.yml
+name: Environment Variable Analysis
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install Envark
+        run: npm install -g envark
+      
+      - name: Analyze environment variables
+        run: |
+          envark analyze --fail-on critical
+          envark analyze --output json > envark-report.json
+      
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: envark-report
+          path: envark-report.json
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('envark-report.json'));
+            
+            const comment = `## 🔍 Envark Analysis\n\n` +
+              `- Total variables: ${report.summary.totalVariables}\n` +
+              `- 🔴 Critical: ${report.summary.critical}\n` +
+              `- 🟠 High: ${report.summary.high}\n` +
+              `- 🟡 Medium: ${report.summary.medium}\n`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+```
+
+### Pre-commit Hook
+
+```bash
+# .husky/pre-commit
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Run Envark analysis
+envark analyze --fail-on high
+
+if [ $? -ne 0 ]; then
+  echo "❌ Envark found high-risk environment variable issues"
+  echo "Fix them or use --no-verify to skip"
+  exit 1
+fi
+```
+
+### GitLab CI
+
+```yaml
+# .gitlab-ci.yml
+envark-analysis:
+  stage: test
+  image: node:18
+  script:
+    - npm install -g envark
+    - envark analyze --fail-on critical
+    - envark analyze --output json > envark-report.json
+  artifacts:
+    reports:
+      junit: envark-report.json
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+```
+
+---
+
+## Validation at Startup
+
+### Create a Config Validator
+
+```typescript
+// src/config/env.ts
+import { config } from 'dotenv';
+import { z } from 'zod';
+
+// Load .env
+config();
+
+// Define schema
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'staging', 'production']),
+  PORT: z.string().regex(/^\d+$/).transform(Number),
+  DATABASE_URL: z.string().url(),
+  API_SECRET_KEY: z.string().min(32),
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  CACHE_ENABLED: z.string().transform(s => s === 'true').default('true'),
+});
+
+// Validate
+try {
+  const env = envSchema.parse(process.env);
+  export default env;
+} catch (error) {
+  console.error('❌ Invalid environment variables:');
+  console.error(error);
+  process.exit(1);
+}
+```
+
+### Use Type-Safe Config
+
+```typescript
+// src/app.ts
+import env from './config/env';
+
+// ✅ Type-safe, validated config
+const app = express();
+app.listen(env.PORT, () => {
+  console.log(`Server running on port ${env.PORT}`);
+});
+
+const db = new Database(env.DATABASE_URL);
+```
+
+---
+
+## Multi-Environment Strategy
+
+### File Structure
+
+```bash
+.env                    # Local development (gitignored)
+.env.example            # Template (committed)
+.env.development        # Development defaults (committed)
+.env.staging            # Staging config (gitignored or encrypted)
+.env.production         # Production config (never committed)
+.env.test               # Test environment (committed)
+```
+
+### Loading Strategy
+
+```javascript
+// config/env.js
+import { config } from 'dotenv';
+import { existsSync } from 'fs';
+
+const env = process.env.NODE_ENV || 'development';
+
+// Load in priority order
+const files = [
+  `.env.${env}.local`,    // Highest priority
+  `.env.${env}`,
+  '.env.local',
+  '.env',                 // Lowest priority
+];
+
+for (const file of files) {
+  if (existsSync(file)) {
+    config({ path: file });
+    console.log(`Loaded ${file}`);
+  }
+}
+```
+
+---
+
+## Common Pitfalls to Avoid
+
+<Warning>
+  **Don't do these:**
+</Warning>
+
+<AccordionGroup>
+  <Accordion title="❌ Committing .env Files">
+    
+```bash
+# ❌ BAD - Never do this
+git add .env
+git commit -m "Add environment config"
+```
+
+**Why it's bad:**
+- Exposes secrets in version control
+- Secrets remain in git history even if removed later
+- Anyone with repo access gets production credentials
+
+**Solution:**
+```bash
+# .gitignore
+.env
+.env.local
+.env.*.local
+```
+
+  </Accordion>
+  
+  <Accordion title="❌ Hardcoding Secrets">
+    
+```javascript
+// ❌ BAD
+const API_KEY = 'abc123';
+const db = new Database('postgres://admin:password@prod-db/app');
+```
+
+**Why it's bad:**
+- Can't change secrets without code deployment
+- Secrets in version control
+- Same secrets across all environments
+
+**Solution:**
+```javascript
+// ✅ GOOD
+const API_KEY = process.env.API_KEY;
+const db = new Database(process.env.DATABASE_URL);
+```
+
+  </Accordion>
+  
+  <Accordion title="❌ Inconsistent Naming">
+    
+```bash
+# ❌ BAD - Inconsistent style
+Database_url=...
+api-key=...
+STRIPE_secret=...
+```
+
+**Why it's bad:**
+- Hard to search and group
+- Looks unprofessional
+- Confusing for team members
+
+**Solution:**
+```bash
+# ✅ GOOD - Consistent SCREAMING_SNAKE_CASE
+DATABASE_URL=...
+API_KEY=...
+STRIPE_SECRET_KEY=...
+```
+
+  </Accordion>
+  
+  <Accordion title="❌ No Defaults for Development">
+    
+```javascript
+// ❌ BAD - App crashes in development
+const port = process.env.PORT;
+app.listen(port);  // undefined in dev!
+```
+
+**Why it's bad:**
+- Poor developer experience
+- Forces every dev to set up .env
+- Increases onboarding friction
+
+**Solution:**
+```javascript
+// ✅ GOOD - Sensible defaults for dev
+const port = process.env.PORT || 3000;
+app.listen(port);
+```
+
+  </Accordion>
+  
+  <Accordion title="❌ Missing Documentation">
+    
+```bash
+# ❌ BAD - No explanation
+MAX_RETRIES=3
+CACHE_TTL=300
+FEATURE_X=true
+```
+
+**Why it's bad:**
+- New team members don't understand purpose
+- Hard to know valid values
+- Difficult to debug configuration issues
+
+**Solution:**
+```bash
+# ✅ GOOD - Clear documentation
+# Maximum retry attempts for failed API calls (1-10)
+MAX_RETRIES=3
+
+# Cache time-to-live in seconds (default: 300)
+CACHE_TTL=300
+
+# Enable experimental feature X (requires v2 API)
+FEATURE_X=true
+```
+
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Checklist
+
+Use this checklist for every project:
+
+<Steps>
+  <Step title="✅ Setup">
+    - [ ] Create `.env.example` with all required variables
+    - [ ] Add `.env` to `.gitignore`
+    - [ ] Add `.envark/` to `.gitignore`
+    - [ ] Document variables in README.md
+  </Step>
+  
+  <Step title="✅ Security">
+    - [ ] No secrets in version control
+    - [ ] Use secret management in production
+    - [ ] Rotate secrets regularly
+    - [ ] Never use default secrets
+  </Step>
+  
+  <Step title="✅ Code Quality">
+    - [ ] Validate environment at startup
+    - [ ] Use TypeScript for type safety
+    - [ ] Provide defaults for non-sensitive values
+    - [ ] Fail loudly for required variables
+  </Step>
+  
+  <Step title="✅ CI/CD">
+    - [ ] Run Envark in CI pipeline
+    - [ ] Fail builds on critical issues
+    - [ ] Generate reports on PRs
+    - [ ] Use pre-commit hooks
+  </Step>
+  
+  <Step title="✅ Documentation">
+    - [ ] Comment each variable in `.env.example`
+    - [ ] Include examples and valid ranges
+    - [ ] Document where to get API keys
+    - [ ] Explain multi-environment setup
+  </Step>
+</Steps>
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Risk Scoring" icon="shield-halved" href="/guides/risk-scoring">
+    Understand how Envark identifies and scores issues
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/commands">
+    Explore all CLI commands and options
+  </Card>
+</CardGroup>

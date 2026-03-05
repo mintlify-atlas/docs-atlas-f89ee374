@@ -1,0 +1,273 @@
+---
+title: "validate_env_file"
+description: "Validates a .env file against what the codebase actually needs"
+---
+
+## Overview
+
+The `validate_env_file` tool validates a specific .env file against the codebase requirements. It identifies:
+- Variables in the file that code never uses
+- Variables code needs that aren't in the file
+- Variables with empty or placeholder values
+
+## Parameters
+
+<ParamField path="envFilePath" type="string" required>
+  Path to the .env file to validate (relative to project or absolute).
+</ParamField>
+
+<ParamField path="projectPath" type="string" optional>
+  Path to the project directory. Defaults to current working directory.
+</ParamField>
+
+## Response
+
+<ResponseField name="valid" type="boolean" required>
+  Whether the env file passes validation (true if no failures)
+</ResponseField>
+
+<ResponseField name="envFilePath" type="string" required>
+  Relative path to the validated env file
+</ResponseField>
+
+<ResponseField name="results" type="object" required>
+  Validation results grouped by status
+  
+  <Expandable title="properties">
+    <ResponseField name="passed" type="array">
+      Variables that passed validation
+      
+      <Expandable title="entry object">
+        <ResponseField name="variable" type="string">
+          Variable name
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          Always "pass"
+        </ResponseField>
+        <ResponseField name="value" type="string">
+          Variable value (truncated if > 20 chars)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="warnings" type="array">
+      Variables with warnings
+      
+      <Expandable title="entry object">
+        <ResponseField name="variable" type="string">
+          Variable name
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          Always "warning"
+        </ResponseField>
+        <ResponseField name="issue" type="string">
+          Description of the warning
+        </ResponseField>
+        <ResponseField name="suggestion" type="string">
+          Recommended action
+        </ResponseField>
+        <ResponseField name="value" type="string" optional>
+          Variable value (if applicable)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="failed" type="array">
+      Variables that failed validation
+      
+      <Expandable title="entry object">
+        <ResponseField name="variable" type="string">
+          Variable name
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          Always "fail"
+        </ResponseField>
+        <ResponseField name="issue" type="string">
+          Description of the failure
+        </ResponseField>
+        <ResponseField name="suggestion" type="string">
+          Recommended fix
+        </ResponseField>
+        <ResponseField name="value" type="string" optional>
+          Variable value (if applicable)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="summary" type="object" required>
+  Summary statistics
+  
+  <Expandable title="properties">
+    <ResponseField name="total" type="number">
+      Total variables in the env file
+    </ResponseField>
+    <ResponseField name="passed" type="number">
+      Number of variables that passed
+    </ResponseField>
+    <ResponseField name="warnings" type="number">
+      Number of warnings
+    </ResponseField>
+    <ResponseField name="failed" type="number">
+      Number of failures
+    </ResponseField>
+    <ResponseField name="unusedInFile" type="number">
+      Variables in file but never used in code
+    </ResponseField>
+    <ResponseField name="missingFromFile" type="number">
+      Variables used in code but missing from file
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  Scan metadata
+  
+  <Expandable title="properties">
+    <ResponseField name="projectPath" type="string">
+      Absolute path to the scanned project
+    </ResponseField>
+    <ResponseField name="scannedFiles" type="number">
+      Number of files scanned
+    </ResponseField>
+    <ResponseField name="cacheHit" type="boolean">
+      Whether the scan used cached results
+    </ResponseField>
+    <ResponseField name="duration" type="number">
+      Scan duration in milliseconds
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Response
+
+```json
+{
+  "valid": false,
+  "envFilePath": ".env.production",
+  "results": {
+    "passed": [
+      {
+        "variable": "DATABASE_URL",
+        "status": "pass",
+        "value": "postgresql://user:p..."
+      },
+      {
+        "variable": "REDIS_URL",
+        "status": "pass",
+        "value": "redis://localhost:..."
+      }
+    ],
+    "warnings": [
+      {
+        "variable": "LEGACY_API_KEY",
+        "status": "warning",
+        "issue": "Defined in env file but never used in code",
+        "suggestion": "Remove if not needed, or verify it's used indirectly",
+        "value": "sk_test_abc123..."
+      },
+      {
+        "variable": "OPTIONAL_FEATURE",
+        "status": "warning",
+        "issue": "Used in code but missing from env file (has default)",
+        "suggestion": "Consider adding explicitly for clarity"
+      }
+    ],
+    "failed": [
+      {
+        "variable": "API_KEY",
+        "status": "fail",
+        "issue": "Used in code but missing from env file",
+        "suggestion": "Add this variable to your env file"
+      },
+      {
+        "variable": "SECRET_KEY",
+        "status": "fail",
+        "issue": "Placeholder value detected",
+        "suggestion": "Replace with actual production value",
+        "value": "your-secret-here"
+      },
+      {
+        "variable": "SMTP_PASSWORD",
+        "status": "fail",
+        "issue": "Empty value",
+        "suggestion": "Set a valid value or remove if not needed",
+        "value": "(empty)"
+      }
+    ]
+  },
+  "summary": {
+    "total": 7,
+    "passed": 2,
+    "warnings": 2,
+    "failed": 3,
+    "unusedInFile": 1,
+    "missingFromFile": 1
+  },
+  "metadata": {
+    "projectPath": "/Users/dev/my-project",
+    "scannedFiles": 156,
+    "cacheHit": false,
+    "duration": 212
+  }
+}
+```
+
+## Usage Example
+
+AI assistants can validate environment files before deployment:
+
+```json
+{
+  "name": "validate_env_file",
+  "arguments": {
+    "envFilePath": ".env.production",
+    "projectPath": "/path/to/project"
+  }
+}
+```
+
+Validate with relative path:
+
+```json
+{
+  "name": "validate_env_file",
+  "arguments": {
+    "envFilePath": ".env"
+  }
+}
+```
+
+## Validation Rules
+
+The tool checks for these common issues:
+
+### Failed Validations
+- **Missing from file**: Variable used in code but not present in the env file
+- **Empty value**: Variable defined but has no value
+- **Placeholder value**: Contains placeholder text like "your-key-here", "changeme", "xxx", etc.
+
+### Warnings
+- **Unused in file**: Variable defined in env file but never used in code
+- **Missing with default**: Variable used in code but not in file (has default value)
+
+## Placeholder Detection
+
+The following patterns are detected as invalid placeholder values:
+- `changeme`
+- `your-key`, `your-token`, `your-secret`, `your-password`
+- `xxx` (multiple x's)
+- `todo`, `fixme`
+- `replace-me`, `replaceme`
+- `placeholder`
+- `<...>` or `[...]` brackets
+- `example`
+
+## Use Cases
+
+- **Pre-Deployment**: Validate production env files before deploying
+- **Environment Setup**: Ensure developers have all required variables configured
+- **CI/CD**: Automated validation in continuous integration pipelines
+- **Security**: Detect placeholder values that shouldn't be in production
+- **Cleanup**: Identify unused variables that can be removed

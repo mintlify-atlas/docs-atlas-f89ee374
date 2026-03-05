@@ -1,0 +1,360 @@
+---
+title: "get_env_graph"
+description: "Returns the dependency graph of environment variables"
+---
+
+## Overview
+
+The `get_env_graph` tool analyzes relationships between environment variables and returns a dependency graph. It shows:
+- Which variables cluster together (used in the same files)
+- Load-bearing variables (used across most of the codebase)
+- Isolated variables (not related to others)
+- Connection strength between variables
+
+## Parameters
+
+<ParamField path="projectPath" type="string" optional>
+  Path to the project directory. Defaults to current working directory.
+</ParamField>
+
+## Response
+
+<ResponseField name="graph" type="object" required>
+  The environment variable dependency graph
+  
+  <Expandable title="properties">
+    <ResponseField name="nodes" type="array">
+      Graph nodes (limited to first 50)
+      
+      <Expandable title="node object">
+        <ResponseField name="name" type="string">
+          Variable name
+        </ResponseField>
+        <ResponseField name="usageCount" type="number">
+          Number of times this variable is used
+        </ResponseField>
+        <ResponseField name="fileCount" type="number">
+          Number of files using this variable
+        </ResponseField>
+        <ResponseField name="cluster" type="string" optional>
+          Cluster name (Database, API, Authentication, etc.)
+        </ResponseField>
+        <ResponseField name="isLoadBearing" type="boolean">
+          Whether this is a load-bearing variable
+        </ResponseField>
+        <ResponseField name="connections" type="number">
+          Number of connections to other variables
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="edges" type="array">
+      Graph edges showing relationships (limited to first 100)
+      
+      <Expandable title="edge object">
+        <ResponseField name="from" type="string">
+          Source variable name
+        </ResponseField>
+        <ResponseField name="to" type="string">
+          Target variable name
+        </ResponseField>
+        <ResponseField name="weight" type="number">
+          Connection strength (number of shared files)
+        </ResponseField>
+        <ResponseField name="sharedFiles" type="string[]">
+          Files where both variables are used (limited to first 3)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="adjacencyList" type="object">
+      Map of variable names to their connected neighbors
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="clusters" type="array" required>
+  Array of detected variable clusters
+  
+  <Expandable title="cluster object">
+    <ResponseField name="name" type="string">
+      Cluster name (e.g., Database, API, Authentication)
+    </ResponseField>
+    <ResponseField name="variables" type="string[]">
+      Variable names in this cluster
+    </ResponseField>
+    <ResponseField name="size" type="number">
+      Number of variables in the cluster
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="loadBearingVars" type="string[]" required>
+  Array of load-bearing variable names (used in many files)
+</ResponseField>
+
+<ResponseField name="isolatedVars" type="string[]" required>
+  Array of isolated variable names (not connected to others)
+</ResponseField>
+
+<ResponseField name="stats" type="object" required>
+  Graph statistics
+  
+  <Expandable title="properties">
+    <ResponseField name="totalNodes" type="number">
+      Total number of variables in the graph
+    </ResponseField>
+    <ResponseField name="totalEdges" type="number">
+      Total number of connections
+    </ResponseField>
+    <ResponseField name="totalClusters" type="number">
+      Number of detected clusters
+    </ResponseField>
+    <ResponseField name="avgConnections" type="number">
+      Average connections per variable
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  Scan metadata
+  
+  <Expandable title="properties">
+    <ResponseField name="projectPath" type="string">
+      Absolute path to the scanned project
+    </ResponseField>
+    <ResponseField name="scannedFiles" type="number">
+      Number of files scanned
+    </ResponseField>
+    <ResponseField name="cacheHit" type="boolean">
+      Whether the scan used cached results
+    </ResponseField>
+    <ResponseField name="duration" type="number">
+      Scan duration in milliseconds
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Response
+
+```json
+{
+  "graph": {
+    "nodes": [
+      {
+        "name": "DATABASE_URL",
+        "usageCount": 12,
+        "fileCount": 8,
+        "cluster": "Database",
+        "isLoadBearing": true,
+        "connections": 5
+      },
+      {
+        "name": "DB_HOST",
+        "usageCount": 4,
+        "fileCount": 3,
+        "cluster": "Database",
+        "isLoadBearing": false,
+        "connections": 3
+      },
+      {
+        "name": "API_KEY",
+        "usageCount": 8,
+        "fileCount": 6,
+        "cluster": "API",
+        "isLoadBearing": true,
+        "connections": 2
+      },
+      {
+        "name": "JWT_SECRET",
+        "usageCount": 6,
+        "fileCount": 4,
+        "cluster": "Authentication",
+        "isLoadBearing": false,
+        "connections": 2
+      },
+      {
+        "name": "SESSION_SECRET",
+        "usageCount": 5,
+        "fileCount": 4,
+        "cluster": "Authentication",
+        "isLoadBearing": false,
+        "connections": 3
+      }
+    ],
+    "edges": [
+      {
+        "from": "DATABASE_URL",
+        "to": "DB_HOST",
+        "weight": 2,
+        "sharedFiles": [
+          "src/db/connection.ts",
+          "src/config/database.ts"
+        ]
+      },
+      {
+        "from": "JWT_SECRET",
+        "to": "SESSION_SECRET",
+        "weight": 3,
+        "sharedFiles": [
+          "src/auth/jwt.ts",
+          "src/middleware/session.ts",
+          "src/config/auth.ts"
+        ]
+      },
+      {
+        "from": "API_KEY",
+        "to": "API_SECRET",
+        "weight": 4,
+        "sharedFiles": [
+          "src/api/client.ts",
+          "src/services/external-api.ts",
+          "src/config/api.ts"
+        ]
+      }
+    ],
+    "adjacencyList": {
+      "DATABASE_URL": ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"],
+      "DB_HOST": ["DATABASE_URL", "DB_PORT", "DB_NAME"],
+      "API_KEY": ["API_SECRET", "API_ENDPOINT"],
+      "JWT_SECRET": ["SESSION_SECRET", "AUTH_EXPIRY"],
+      "SESSION_SECRET": ["JWT_SECRET", "COOKIE_SECRET", "AUTH_EXPIRY"]
+    }
+  },
+  "clusters": [
+    {
+      "name": "Database",
+      "variables": ["DATABASE_URL", "DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"],
+      "size": 6
+    },
+    {
+      "name": "Authentication",
+      "variables": ["JWT_SECRET", "SESSION_SECRET", "COOKIE_SECRET", "AUTH_EXPIRY"],
+      "size": 4
+    },
+    {
+      "name": "API",
+      "variables": ["API_KEY", "API_SECRET", "API_ENDPOINT"],
+      "size": 3
+    }
+  ],
+  "loadBearingVars": [
+    "DATABASE_URL",
+    "API_KEY",
+    "NODE_ENV"
+  ],
+  "isolatedVars": [
+    "LEGACY_FEATURE_FLAG",
+    "TEMP_DEBUG_MODE"
+  ],
+  "stats": {
+    "totalNodes": 42,
+    "totalEdges": 87,
+    "totalClusters": 8,
+    "avgConnections": 4.14
+  },
+  "metadata": {
+    "projectPath": "/Users/dev/my-project",
+    "scannedFiles": 156,
+    "cacheHit": false,
+    "duration": 298
+  }
+}
+```
+
+## Usage Example
+
+Get the dependency graph:
+
+```json
+{
+  "name": "get_env_graph",
+  "arguments": {
+    "projectPath": "/path/to/project"
+  }
+}
+```
+
+Minimal call:
+
+```json
+{
+  "name": "get_env_graph",
+  "arguments": {}
+}
+```
+
+## Graph Concepts
+
+### Nodes
+
+Each node represents an environment variable with:
+- **usageCount**: How many times it appears in code
+- **fileCount**: How many files use it
+- **cluster**: The functional group it belongs to
+- **isLoadBearing**: Whether it's used across many files
+- **connections**: Number of related variables
+
+### Edges
+
+Edges represent relationships between variables:
+- **weight**: Number of files where both variables are used together
+- **sharedFiles**: Specific files creating the connection
+
+Higher weight = stronger relationship = variables likely related functionally.
+
+### Load-Bearing Variables
+
+Variables used across a significant portion of the codebase. These are:
+- Critical to application functionality
+- High-impact if misconfigured
+- Should be carefully documented and validated
+
+Typically includes:
+- Database connection strings
+- API keys used throughout the app
+- Environment indicators (NODE_ENV)
+- Base URLs and core configuration
+
+### Isolated Variables
+
+Variables with no connections to others. They:
+- Are used in isolation (single file or feature)
+- May be feature flags or legacy code
+- Could be candidates for removal if unused
+
+### Clusters
+
+Groups of related variables detected by:
+- **Co-occurrence**: Used in the same files
+- **Naming patterns**: Similar prefixes (DB_*, AWS_*, etc.)
+- **Functional grouping**: Related purpose
+
+Common clusters:
+- **Database**: DB_*, DATABASE_*, POSTGRES_*, MYSQL_*
+- **Authentication**: JWT_*, SESSION_*, AUTH_*
+- **API**: API_*, *_API_KEY, *_API_SECRET
+- **Caching**: REDIS_*, MEMCACHED_*
+- **Email**: SMTP_*, SENDGRID_*, MAILGUN_*
+- **Monitoring**: SENTRY_*, DATADOG_*
+- **Cloud**: AWS_*, GCP_*, AZURE_*
+
+## Use Cases
+
+- **Architecture Understanding**: Visualize how configuration is organized
+- **Impact Analysis**: Understand which variables are related before making changes
+- **Refactoring**: Identify clusters that should be migrated together
+- **Documentation**: Group related variables in documentation
+- **Dependency Tracking**: See which variables depend on each other
+- **Migration Planning**: Plan environment migrations by cluster
+- **Code Organization**: Understand configuration structure
+
+## Visualization
+
+The graph data can be visualized using:
+- Force-directed graph layouts (D3.js, Cytoscape)
+- Network diagrams
+- Cluster maps
+- Adjacency matrices
+
+Nodes can be sized by `usageCount` and colored by `cluster`.

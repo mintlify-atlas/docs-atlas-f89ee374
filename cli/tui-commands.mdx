@@ -1,0 +1,746 @@
+---
+title: TUI Commands
+description: Interactive terminal commands for analyzing environment variables
+---
+
+## Overview
+
+The Envark TUI (Terminal User Interface) provides a rich interactive shell for environment variable analysis. Access it by running `envark` or `envark -i`.
+
+## Navigation
+
+**Keyboard shortcuts:**
+- **Type `/`** — Open command dropdown menu
+- **Arrow ↓↑** — Navigate dropdown suggestions
+- **Tab** — Autocomplete selected command
+- **Enter** — Execute command
+- **Ctrl+C** — Clear output or exit
+
+**Command history:**
+- Up/Down arrows navigate previous commands
+- History persists for 100 entries per session
+
+---
+
+## scan
+
+Scan project for environment variables.
+
+```bash
+scan [filter]
+```
+
+**Aliases:** `s`, `map`
+
+<ParamField path="filter" type="enum" default="all">
+  Filter results by variable status.
+  
+  **Options:**
+  - `all` - Show all variables (default)
+  - `missing` - Variables used but not defined
+  - `unused` - Variables defined but never used
+  - `risky` - Variables with high or critical risk
+  - `undocumented` - Variables not in .env.example
+</ParamField>
+
+**Output includes:**
+- Total environment variable count
+- Defined vs undefined breakdown
+- Missing variables that will cause crashes
+- Risk level distribution
+- Complete variable list with locations
+
+**Examples:**
+
+```bash All Variables
+❯ scan
+# or
+❯ s
+# or
+❯ map
+```
+
+```bash Missing Only
+❯ scan missing
+```
+
+```bash Risky Variables
+❯ scan risky
+```
+
+**Performance:**
+- Displays animated spinner during scan
+- Caches results for faster subsequent runs
+- Typical scan time: < 2s for 500-file projects
+
+---
+
+## risk
+
+Analyze environment variable security risks.
+
+```bash
+risk [min-level]
+```
+
+**Aliases:** `r`, `risks`
+
+<ParamField path="min-level" type="enum" default="info">
+  Minimum risk level to display.
+  
+  **Options:**
+  - `info` - Show all findings (default)
+  - `low` - Show low and above
+  - `medium` - Show medium and above
+  - `high` - Show high and critical only
+  - `critical` - Show critical only
+</ParamField>
+
+**Risk levels explained:**
+
+| Level | Criteria | Examples |
+|-------|----------|----------|
+| **Critical** | Used but not defined, no default | `JWT_SECRET`, `DATABASE_URL` |
+| **High** | Secret-like name in committed file | `API_KEY=xxx` in `.env` |
+| **Medium** | Multiple usages, no default | `SERVICE_URL` used 5+ times |
+| **Low** | Undocumented or unused | Defined but not in `.env.example` |
+| **Info** | Fully configured | Has definition, usage, and docs |
+
+**Examples:**
+
+```bash All Risks
+❯ risk
+# or
+❯ r
+```
+
+```bash Production-Critical Only
+❯ risk critical
+```
+
+```bash Medium and Above
+❯ risk medium
+```
+
+**Output format:**
+```
+┌─ RISK ANALYSIS ─────────────────────────────
+
+  SUMMARY
+  Critical: 2    High: 1    Medium: 5
+
+  CRITICAL ISSUES
+  • JWT_SECRET
+    └─ Used but not defined (5 usages)
+    └─ Files: src/auth/jwt.ts:12, ...
+
+  • DATABASE_URL
+    └─ Used but not defined (3 usages)
+    └─ Files: src/db/client.ts:8, ...
+```
+
+---
+
+## missing
+
+Find variables that are used in code but not defined.
+
+```bash
+missing
+```
+
+**Aliases:** `m`, `undefined`
+
+**Identifies:**
+- Variables accessed without definition
+- No default value provided in code
+- Will cause runtime crashes if not set
+
+**Danger levels:**
+- **Critical** - Used 5+ times, no fallback
+- **High** - Used 2-4 times
+- **Medium** - Single usage, no default
+
+**Example:**
+
+```bash
+❯ missing
+# or
+❯ m
+```
+
+**Output:**
+```json
+{
+  "missing": [
+    {
+      "name": "STRIPE_SECRET_KEY",
+      "usageCount": 8,
+      "dangerLevel": "critical",
+      "locations": [
+        "src/payments/stripe.ts:15",
+        "src/webhooks/stripe.ts:42",
+        ...
+      ]
+    }
+  ],
+  "willCauseRuntimeCrash": 3
+}
+```
+
+---
+
+## duplicates
+
+Find duplicate or conflicting variable definitions.
+
+```bash
+duplicates
+```
+
+**Aliases:** `d`, `dups`
+
+**Detects:**
+- Same variable defined in multiple .env files
+- Conflicting values across environments
+- Shadowed definitions
+
+**Example:**
+
+```bash
+❯ duplicates
+# or
+❯ d
+```
+
+**Output:**
+```json
+{
+  "duplicates": [
+    {
+      "name": "API_URL",
+      "definitions": [
+        { "file": ".env", "value": "http://localhost:3000" },
+        { "file": ".env.local", "value": "http://localhost:8080" },
+        { "file": ".env.development", "value": "http://dev.api.com" }
+      ],
+      "conflict": true
+    }
+  ]
+}
+```
+
+---
+
+## undocumented
+
+Find variables not documented in .env.example.
+
+```bash
+undocumented
+```
+
+**Aliases:** `u`, `undoc`
+
+**Checks for:**
+- Variables used in code
+- Not present in .env.example
+- Makes onboarding difficult
+
+**Example:**
+
+```bash
+❯ undocumented
+# or
+❯ u
+```
+
+**Output:**
+```json
+{
+  "undocumented": [
+    {
+      "name": "REDIS_URL",
+      "usedIn": ["src/cache/redis.ts"],
+      "definedIn": [".env"],
+      "missingFrom": ".env.example"
+    }
+  ],
+  "count": 7
+}
+```
+
+---
+
+## usage
+
+Show detailed usage information for a specific variable.
+
+```bash
+usage <variable-name>
+```
+
+**Aliases:** `env`
+
+<ParamField path="variable-name" type="string" required>
+  Name of the environment variable to analyze.
+</ParamField>
+
+**Shows:**
+- All code locations where variable is accessed
+- Definition locations (.env files)
+- Default values in code
+- Documentation status
+- Risk assessment
+
+**Examples:**
+
+```bash
+❯ usage DATABASE_URL
+# or
+❯ env DATABASE_URL
+```
+
+**Output:**
+```json
+{
+  "variable": "DATABASE_URL",
+  "defined": true,
+  "used": true,
+  "usages": [
+    {
+      "file": "src/db/client.ts",
+      "line": 12,
+      "context": "const db = new Client(process.env.DATABASE_URL)"
+    },
+    {
+      "file": "src/migrations/run.ts",
+      "line": 8,
+      "context": "migrate(process.env.DATABASE_URL)"
+    }
+  ],
+  "definitions": [
+    {
+      "file": ".env",
+      "value": "postgresql://localhost:5432/mydb"
+    }
+  ],
+  "riskLevel": "medium",
+  "hasDefault": false
+}
+```
+
+**Error handling:**
+```bash
+❯ usage
+Error: Variable name required. Usage: usage <variable-name>
+```
+
+---
+
+## graph
+
+Show variable dependency graph.
+
+```bash
+graph
+```
+
+**Aliases:** `g`, `deps`
+
+**Generates:**
+- Relationships between variables
+- Clustering patterns (which vars are used together)
+- File-to-variable mappings
+
+**Example:**
+
+```bash
+❯ graph
+# or
+❯ g
+```
+
+**Output:**
+```json
+{
+  "nodes": [
+    { "id": "DATABASE_URL", "type": "env" },
+    { "id": "src/db/client.ts", "type": "file" }
+  ],
+  "edges": [
+    { "from": "src/db/client.ts", "to": "DATABASE_URL", "type": "uses" }
+  ],
+  "clusters": [
+    {
+      "name": "Database",
+      "variables": ["DATABASE_URL", "DB_POOL_SIZE", "DB_TIMEOUT"]
+    },
+    {
+      "name": "Auth",
+      "variables": ["JWT_SECRET", "SESSION_SECRET", "COOKIE_KEY"]
+    }
+  ]
+}
+```
+
+---
+
+## validate
+
+Validate a .env file against code requirements.
+
+```bash
+validate [path]
+```
+
+**Aliases:** `v`, `check`
+
+<ParamField path="path" type="string" default=".env">
+  Path to the .env file to validate.
+  
+  Relative to current working directory.
+</ParamField>
+
+**Validation checks:**
+- All required variables present
+- No syntax errors
+- Value format validation (URLs, numbers, etc.)
+- Security checks (no secrets in wrong files)
+
+**Examples:**
+
+```bash Default .env
+❯ validate
+# or
+❯ v
+```
+
+```bash Production Environment
+❯ validate .env.production
+```
+
+```bash Custom Path
+❯ validate ../config/.env
+```
+
+**Output:**
+```
+┌─ VALIDATION: .env ──────────────────────────
+
+  ✅ PASSED (18)
+  • PORT
+  • NODE_ENV
+  • DATABASE_URL
+  ...
+
+  ❌ FAILED (3)
+  • JWT_SECRET (Missing)
+  • API_URL (Invalid format)
+  • DB_POOL_SIZE (Should be number)
+
+  Valid: false
+  Required but missing: 1
+  Format issues: 2
+```
+
+---
+
+## generate
+
+Generate .env.example template from codebase.
+
+```bash
+generate [output-path]
+```
+
+**Aliases:** `gen`, `template`
+
+<ParamField path="output-path" type="string" optional>
+  Where to write the generated template.
+  
+  If omitted, prints to console.
+</ParamField>
+
+**Generation includes:**
+- All variables used in code
+- Placeholder values (secrets masked)
+- Inline comments explaining purpose
+- Grouped by category (DB, Auth, API, etc.)
+
+**Examples:**
+
+```bash Print to Console
+❯ generate
+# or
+❯ gen
+```
+
+```bash Write to File
+❯ generate .env.example
+```
+
+```bash Custom Path
+❯ generate docs/ENV_TEMPLATE.md
+```
+
+**Generated output:**
+```bash
+# Database Configuration
+DATABASE_URL=postgresql://user:pass@localhost:5432/db
+DB_POOL_SIZE=10
+
+# Authentication
+JWT_SECRET=your-secret-here
+JWT_EXPIRY=1h
+SESSION_SECRET=your-session-secret
+
+# External APIs
+STRIPE_SECRET_KEY=sk_test_...
+SENDGRID_API_KEY=SG...
+
+# Application
+PORT=3000
+NODE_ENV=development
+```
+
+**Success message (when writing to file):**
+```
+✅ Template written to .env.example
+   Variables: 24
+   Required: 8
+   Optional: 16
+```
+
+---
+
+## help
+
+Show command help information.
+
+```bash
+help [command]
+```
+
+**Aliases:** `h`, `?`
+
+<ParamField path="command" type="string" optional>
+  Specific command to get help for.
+  
+  If omitted, shows all commands.
+</ParamField>
+
+**Examples:**
+
+```bash All Commands
+❯ help
+# or
+❯ h
+# or
+❯ ?
+```
+
+```bash Specific Command
+❯ help scan
+```
+
+**Output (all commands):**
+```
+┌─ AVAILABLE COMMANDS ────────────────────────
+
+  scan            Scan project for environment variables
+  risk            Analyze environment variable risks
+  missing         Find undefined but used variables
+  duplicates      Find duplicate or conflicting definitions
+  undocumented    Find variables not in .env.example
+  usage           Show detailed usage of a variable
+  graph           Show variable dependency graph
+  validate        Validate a .env file
+  generate        Generate .env.example template
+  clear           Clear the screen
+  help            Show this menu
+  exit            Exit Aegis
+
+  Type "help <command>" for detailed information.
+```
+
+**Output (specific command):**
+```
+┌─ HELP: SCAN ────────────────────────────────
+
+  Description: Scan project for environment variables
+  Usage:       scan [filter]
+  Aliases:     s, map
+```
+
+---
+
+## clear
+
+Clear the terminal screen.
+
+```bash
+clear
+```
+
+**Aliases:** `cls`, `c`
+
+**Behavior:**
+- Clears all output from screen
+- Preserves command history
+- Does not reset session state
+
+**Example:**
+
+```bash
+❯ clear
+# or
+❯ cls
+# or
+❯ c
+```
+
+---
+
+## cd
+
+Change the project directory.
+
+```bash
+cd <path>
+```
+
+**Aliases:** `project`
+
+<ParamField path="path" type="string" required>
+  Path to new project directory.
+  
+  Can be absolute or relative.
+</ParamField>
+
+**Examples:**
+
+```bash Relative Path
+❯ cd ../other-project
+```
+
+```bash Absolute Path
+❯ cd /home/user/projects/app
+```
+
+```bash Show Current Path
+❯ cd
+Current path: /home/user/projects/app
+```
+
+**Note:** All subsequent commands operate on the new directory.
+
+---
+
+## exit
+
+Exit the Envark TUI.
+
+```bash
+exit
+```
+
+**Aliases:** `quit`, `q`
+
+**Behavior:**
+- Displays goodbye message
+- Exits with code `0`
+- Clears any active spinners
+
+**Example:**
+
+```bash
+❯ exit
+# or
+❯ quit
+# or
+❯ q
+
+  Goodbye! Stay secure. 🛡️
+```
+
+---
+
+## Command Execution Flow
+
+1. **Input parsing** - Command and arguments extracted
+2. **Command lookup** - Matches name or alias
+3. **Spinner display** - Animated indicator during execution
+4. **Tool execution** - Underlying analysis runs
+5. **Result rendering** - Formatted output displayed
+6. **Error handling** - User-friendly error messages
+
+**Execution times:**
+
+| Command | Small Project | Large Project |
+|---------|---------------|---------------|
+| scan | < 500ms | 2-5s |
+| risk | < 200ms | 1-3s |
+| missing | < 100ms | < 1s |
+| validate | < 100ms | < 500ms |
+| generate | < 200ms | < 1s |
+| usage | < 50ms | < 200ms |
+| graph | < 300ms | 1-2s |
+
+---
+
+## Error Messages
+
+**Unknown command:**
+```
+❌ Error: Unknown command: scna. Type "/" to see available commands.
+```
+
+**Missing argument:**
+```
+❌ Error: Variable name required. Usage: usage <variable-name>
+```
+
+**File not found:**
+```
+❌ Error: .env.production not found
+```
+
+**Invalid directory:**
+```
+❌ Error: Directory does not exist: /invalid/path
+```
+
+---
+
+## Tips & Tricks
+
+**Quick command access:**
+```bash
+# Type just the first letter + tab
+❯ s<TAB>     # Autocompletes to "scan"
+❯ r<TAB>     # Autocompletes to "risk"
+```
+
+**Command history:**
+```bash
+# Use arrow keys to cycle through previous commands
+❯ scan missing
+❯ <UP>       # Recalls "scan missing"
+```
+
+**Dropdown menu:**
+```bash
+# Type / to see all commands with descriptions
+❯ /
+# Use arrows to navigate, Enter to select
+```
+
+**Chain analysis:**
+```bash
+❯ scan
+❯ risk critical
+❯ missing
+❯ validate .env
+# Run all checks in sequence
+```

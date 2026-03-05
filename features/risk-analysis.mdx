@@ -1,0 +1,631 @@
+---
+title: Risk Analysis
+description: Understand how Envark detects security vulnerabilities and configuration issues in your environment variables
+---
+
+## Overview
+
+Envark's risk analysis engine evaluates environment variables for security vulnerabilities, configuration issues, and best practice violations. It uses a multi-factor scoring system to classify risks and provides actionable recommendations.
+
+## Risk Levels
+
+Envark classifies issues into five severity levels:
+
+<CardGroup cols={2}>
+  <Card title="Critical" icon="circle-exclamation" color="#dc2626">
+    **Score: 5**
+
+    Immediate security threats or application-breaking issues:
+    - Variables used in code with no definition
+    - Hardcoded secrets in committed files
+    - Exposed credentials
+  </Card>
+
+  <Card title="High" icon="triangle-exclamation" color="#ea580c">
+    **Score: 4**
+
+    Serious security risks requiring urgent attention:
+    - Secrets in potentially committed .env files
+    - Weak encryption keys
+    - Missing required variables with no defaults
+  </Card>
+
+  <Card title="Medium" icon="exclamation" color="#f59e0b">
+    **Score: 3**
+
+    Configuration issues that should be addressed:
+    - Variables with conflicting values across files
+    - Multiple usages with no default value
+    - Placeholder values in production
+    - Inconsistent naming patterns
+  </Card>
+
+  <Card title="Low" icon="info" color="#3b82f6">
+    **Score: 1-2**
+
+    Minor issues and improvements:
+    - Undocumented variables
+    - Dead variables (defined but unused)
+    - Empty values
+    - Poor naming conventions
+  </Card>
+
+  <Card title="Info" icon="circle-info" color="#6b7280">
+    **Score: 0**
+
+    Informational findings with no risk:
+    - Well-configured variables
+    - Properly documented settings
+    - Following best practices
+  </Card>
+</CardGroup>
+
+## Risk Scoring Algorithm
+
+Envark calculates a risk score (0-5) using multiple factors:
+
+```typescript
+// From src/core/analyzer.ts:99-129
+function calculateRiskScore(variable: EnvVariable): number {
+    let score = 0;
+
+    // Critical: Used but never defined anywhere and no default
+    if (variable.usedInCode && !variable.definedInEnvFile && !variable.hasDefault) {
+        score += 5;
+    }
+
+    // High: Defined in .env but not in .env.example (potential secret leak)
+    if (variable.definedInEnvFile && !variable.definedInExample && looksLikeSecret(variable.name)) {
+        score += 4;
+    }
+
+    // Medium: Used in multiple files with no default
+    if (variable.usedInCode && variable.usages.length > 2 && !variable.hasDefault) {
+        score += 3;
+    }
+
+    // Low: Not documented
+    if (!variable.isDocumented && variable.usedInCode) {
+        score += 1;
+    }
+
+    // Low: Dead variable (defined but never used)
+    if (variable.definedInEnvFile && !variable.usedInCode) {
+        score += 1;
+    }
+
+    return Math.min(score, 5);
+}
+```
+
+### Score to Risk Level Mapping
+
+```typescript
+// From src/core/analyzer.ts:134-140
+function scoreToRiskLevel(score: number): RiskLevel {
+    if (score >= 5) return 'critical';
+    if (score >= 4) return 'high';
+    if (score >= 3) return 'medium';
+    if (score >= 1) return 'low';
+    return 'info';
+}
+```
+
+## Issue Types
+
+Envark detects nine distinct issue types:
+
+<Tabs>
+  <Tab title="MISSING">
+    **Severity: Critical**
+
+    Variable is used in code but not defined anywhere.
+
+    ```typescript
+    // code.ts
+    const apiKey = process.env.API_KEY;  // ✗ API_KEY not in any .env file
+    ```
+
+    **Risk:** Application will receive `undefined`, potentially causing runtime errors or security issues.
+
+    **Recommendation:** Add the variable to your .env file or provide a default value in code.
+
+    ```bash
+    # .env
+    API_KEY=your_api_key_here
+    ```
+  </Tab>
+
+  <Tab title="EXPOSED">
+    **Severity: High**
+
+    Secret-like variable defined in a potentially committed .env file.
+
+    ```bash
+    # .env (might be committed!)
+    DATABASE_PASSWORD=super_secret_123
+    SECRET_KEY=my-secret-key
+    ```
+
+    **Risk:** Credentials may be exposed in version control.
+
+    **Detection Logic:**
+    ```typescript
+    // From src/core/analyzer.ts:222-237
+    if (looksLikeSecret(variable.name) && variable.definedInEnvFile) {
+        // Check if it's in a committed file (not .env.local)
+        const inCommittedFile = variable.definitions.some(d => {
+            const path = d.relativePath.toLowerCase();
+            return path === '.env' || path.endsWith('/.env');
+        });
+
+        if (inCommittedFile) {
+            issues.push({
+                type: 'EXPOSED',
+                severity: 'high',
+                message: `${variable.name} looks like a secret but is in a potentially committed .env file`,
+                recommendation: `Move ${variable.name} to .env.local or ensure .env is in .gitignore`
+            });
+        }
+    }
+    ```
+
+    **Recommendation:**
+    - Move secrets to `.env.local` (git-ignored)
+    - Ensure `.env` is in `.gitignore`
+    - Use secret management tools (Vault, AWS Secrets Manager)
+  </Tab>
+
+  <Tab title="DUPLICATE">
+    **Severity: Medium**
+
+    Variable has different values across multiple .env files.
+
+    ```bash
+    # .env
+    API_URL=https://prod.example.com
+
+    # .env.development
+    API_URL=http://localhost:3000
+
+    # .env.local
+    API_URL=https://staging.example.com  # ⚠ Three different values
+    ```
+
+    **Risk:** Confusion about which value is active, potential for using wrong configuration.
+
+    **Recommendation:** Document why values differ or consolidate to environment-specific files.
+  </Tab>
+
+  <Tab title="PLACEHOLDER_VALUE">
+    **Severity: Medium**
+
+    Variable contains an obvious placeholder that should be replaced.
+
+    ```bash
+    # Placeholder patterns detected
+    API_KEY=changeme
+    DATABASE_URL=your-connection-string-here
+    SECRET=xxx
+    TOKEN=<your-token>
+    PASSWORD=todo
+    ```
+
+    **Detection Patterns:**
+    ```typescript
+    // From src/core/analyzer.ts:63-80
+    const PLACEHOLDER_VALUES = [
+        'changeme',
+        'your-key-here',
+        'your_key_here',
+        'xxx',
+        'todo',
+        'fixme',
+        'replace-me',
+        'replace_me',
+        'placeholder',
+        'example',
+        'test',
+        'development',
+        'your-',
+        'your_',
+        '<',
+        '>',
+    ];
+    ```
+
+    **Recommendation:** Replace with actual production values before deployment.
+  </Tab>
+
+  <Tab title="INCONSISTENT">
+    **Severity: Medium**
+
+    Variable names that are similar and may represent the same configuration.
+
+    ```javascript
+    // Different files using similar names
+    process.env.DATABASE_URL    // config.ts
+    process.env.DB_URL          // db.ts
+    process.env.MONGO_URL       // mongo.ts
+    ```
+
+    **Risk:** Team confusion, potential for misconfiguration.
+
+    **Recommendation:** Standardize variable naming across the codebase.
+  </Tab>
+
+  <Tab title="NO_DEFAULT">
+    **Severity: Medium**
+
+    Variable used in multiple places with no fallback value.
+
+    ```javascript
+    // Multiple usages without defaults
+    const port = process.env.PORT;           // ✗ No default
+    const host = process.env.HOST;           // ✗ No default
+
+    // Better approach
+    const port = process.env.PORT || 3000;   // ✓ Has default
+    ```
+
+    **Risk:** Undefined behavior if variable is not set.
+
+    **Recommendation:** Add default values or validate at startup.
+  </Tab>
+
+  <Tab title="UNDOCUMENTED">
+    **Severity: Low**
+
+    Variable is not in `.env.example` and has no documentation.
+
+    ```bash
+    # .env
+    NEW_FEATURE_FLAG=true  # ✗ Not in .env.example
+    ```
+
+    **Risk:** New team members won't know this variable exists.
+
+    **Recommendation:**
+    ```bash
+    # .env.example
+    # Enable the new feature (true/false)
+    NEW_FEATURE_FLAG=false
+    ```
+  </Tab>
+
+  <Tab title="DEAD">
+    **Severity: Low**
+
+    Variable is defined in .env files but never used in code.
+
+    ```bash
+    # .env
+    OLD_API_KEY=abc123  # ✗ No references in code
+    ```
+
+    **Risk:** Configuration clutter, confusion about what's needed.
+
+    **Recommendation:** Remove unused variables or verify they're needed for indirect usage.
+  </Tab>
+
+  <Tab title="EMPTY_VALUE">
+    **Severity: Low**
+
+    Variable is defined with an empty value.
+
+    ```bash
+    # .env
+    OPTIONAL_FEATURE=
+    DEBUG_MODE=""
+    ```
+
+    **Risk:** May cause unexpected behavior if code doesn't handle empty strings.
+
+    **Recommendation:** Set an actual value or remove the variable.
+  </Tab>
+</Tabs>
+
+## Secret Detection
+
+Envark uses pattern matching to identify potential secrets:
+
+```typescript
+// From src/core/analyzer.ts:50-60
+const SECRET_PATTERNS = [
+    /SECRET/i,
+    /PASSWORD/i,
+    /PASS$/i,
+    /TOKEN/i,
+    /KEY$/i,
+    /API_KEY/i,
+    /PRIVATE/i,
+    /CREDENTIAL/i,
+    /AUTH/i,
+];
+
+function looksLikeSecret(name: string): boolean {
+    return SECRET_PATTERNS.some(pattern => pattern.test(name));
+}
+```
+
+### Detected Secret Patterns
+
+<CardGroup cols={3}>
+  <Card title="API Keys">
+    - API_KEY
+    - OPENAI_KEY
+    - STRIPE_KEY
+    - GOOGLE_API_KEY
+  </Card>
+
+  <Card title="Passwords">
+    - PASSWORD
+    - DB_PASSWORD
+    - ADMIN_PASS
+    - USER_PASSWORD
+  </Card>
+
+  <Card title="Tokens">
+    - ACCESS_TOKEN
+    - JWT_TOKEN
+    - REFRESH_TOKEN
+    - AUTH_TOKEN
+  </Card>
+
+  <Card title="Secrets">
+    - SECRET
+    - JWT_SECRET
+    - SESSION_SECRET
+    - WEBHOOK_SECRET
+  </Card>
+
+  <Card title="Private Keys">
+    - PRIVATE_KEY
+    - SSH_KEY
+    - SIGNING_KEY
+    - ENCRYPTION_KEY
+  </Card>
+
+  <Card title="Credentials">
+    - CREDENTIALS
+    - AWS_CREDENTIALS
+    - DB_CREDENTIALS
+    - AUTH_CREDENTIALS
+  </Card>
+</CardGroup>
+
+## Running Risk Analysis
+
+### CLI Command
+
+```bash
+# Analyze all variables
+envark risk
+
+# Filter by minimum risk level
+envark risk --min-level high
+envark risk --min-level critical
+```
+
+### TUI Command
+
+```bash
+# In interactive mode
+/risk
+r
+```
+
+### Output Format
+
+```
+┌─ RISK ANALYSIS ───────────────────────────────────────────┐
+│  Critical: 2  High: 5  Medium: 12  Low: 23
+└──────────────────────────────────────────────────────────┘
+
+  ⚠ DATABASE_PASSWORD [CRITICAL]
+    → Used in code but not defined in any .env file
+    → Add DATABASE_PASSWORD to your .env file or provide a default value
+
+  ⚠ SECRET_KEY [HIGH]
+    → Looks like a secret but is in a potentially committed .env file
+    → Move SECRET_KEY to .env.local or ensure .env is in .gitignore
+
+  ⚠ API_URL [MEDIUM]
+    → Has different values across .env files
+    → .env: "https://prod.example.com"
+    → .env.local: "http://localhost:3000"
+```
+
+## Analysis Result Structure
+
+```typescript
+// From src/core/analyzer.ts:34-47
+export interface AnalysisResult {
+    variables: AnalyzedVariable[];
+    summary: {
+        totalVariables: number;
+        critical: number;
+        high: number;
+        medium: number;
+        low: number;
+        info: number;
+        byIssueType: Record<IssueType, number>;
+    };
+    duplicateGroups: Map<string, Array<{ file: string; value: string }>>;
+    similarNameGroups: Map<string, string[]>;
+}
+```
+
+## Recommendations Engine
+
+For each variable, Envark generates contextual recommendations:
+
+```typescript
+// From src/core/analyzer.ts:263-292
+function generateRecommendations(variable: EnvVariable, issues: Issue[]): string[] {
+    const recommendations: string[] = [];
+
+    // Add unique recommendations from issues
+    for (const issue of issues) {
+        recommendations.push(issue.recommendation);
+    }
+
+    // Add general recommendations
+    if (variable.usedInCode && variable.usages.length > 3 && !variable.hasDefault) {
+        recommendations.push(
+            `Consider creating a config module that validates ${variable.name} at startup`
+        );
+    }
+
+    if (variable.languages.length > 1) {
+        recommendations.push(
+            `${variable.name} is used across ${variable.languages.join(', ')} - ensure consistent handling`
+        );
+    }
+
+    return recommendations;
+}
+```
+
+### Example Recommendations
+
+<Accordion title="For Missing Variables">
+  - Add `DATABASE_URL` to your .env file
+  - Provide a default value in code
+  - Create a config validation module
+  - Document required environment variables
+</Accordion>
+
+<Accordion title="For Exposed Secrets">
+  - Move to `.env.local` (git-ignored)
+  - Use environment-specific files
+  - Implement secret rotation
+  - Consider using AWS Secrets Manager or HashiCorp Vault
+  - Review git history for leaked credentials
+</Accordion>
+
+<Accordion title="For Inconsistent Naming">
+  - Standardize to `DATABASE_URL` across all files
+  - Create a naming convention guide
+  - Use a linter to enforce patterns
+  - Migrate old variable names gradually
+</Accordion>
+
+## Filtering Results
+
+### By Risk Level
+
+```typescript
+// From src/core/analyzer.ts:370-377
+export function filterByRisk(
+    result: AnalysisResult,
+    minRisk: RiskLevel
+): AnalyzedVariable[] {
+    const riskOrder: Record<RiskLevel, number> = { 
+        critical: 5, high: 4, medium: 3, low: 2, info: 1 
+    };
+    const minScore = riskOrder[minRisk];
+    return result.variables.filter(v => riskOrder[v.riskLevel] >= minScore);
+}
+```
+
+### By Issue Type
+
+```typescript
+// From src/core/analyzer.ts:383-387
+export function filterByIssueType(
+    result: AnalysisResult,
+    issueType: IssueType
+): AnalyzedVariable[] {
+    return result.variables.filter(v => 
+        v.issues.some(i => i.type === issueType)
+    );
+}
+```
+
+## AI-Enhanced Analysis
+
+When an AI provider is configured, Envark can provide deeper insights:
+
+```bash
+# Get AI analysis
+envark analyze
+
+# Or in TUI
+/analyze
+an
+```
+
+The AI considers:
+- Your specific framework (Next.js, Django, etc.)
+- Industry-specific security practices
+- Common vulnerability patterns
+- Best practices for your tech stack
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Regular Scanning" icon="calendar">
+    Run `envark risk` regularly, especially before deployments.
+  </Card>
+
+  <Card title="Fix Critical First" icon="fire">
+    Address Critical and High issues before Medium and Low.
+  </Card>
+
+  <Card title="Document Decisions" icon="book">
+    If you intentionally ignore an issue, document why in comments.
+  </Card>
+
+  <Card title="Use CI/CD Integration" icon="gears">
+    Add Envark to your CI pipeline to catch issues early.
+  </Card>
+</CardGroup>
+
+## CI/CD Integration
+
+```yaml
+# .github/workflows/env-check.yml
+name: Environment Variable Check
+
+on: [push, pull_request]
+
+jobs:
+  envark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Envark
+        run: npm install -g envark
+      - name: Run Risk Analysis
+        run: envark risk --min-level high --fail-on-issues
+```
+
+## Programmatic Usage
+
+```typescript
+import { scanProject } from 'envark';
+import { resolveEnvMap } from 'envark/core/resolver';
+import { analyzeEnvVariables, filterByRisk } from 'envark/core/analyzer';
+
+const scan = scanProject('/path/to/project');
+const resolved = resolveEnvMap(scan.usages);
+const analysis = analyzeEnvVariables(resolved);
+
+// Get critical issues
+const critical = filterByRisk(analysis, 'critical');
+
+if (critical.length > 0) {
+    console.error(`Found ${critical.length} critical issues!`);
+    process.exit(1);
+}
+```
+
+## Implementation Reference
+
+The risk analysis engine is implemented in:
+- **`src/core/analyzer.ts`**: Main analysis logic (lines 99-365)
+- **`src/core/resolver.ts`**: Variable resolution and deduplication
+- **`src/tools/get_env_risk.ts`**: CLI tool interface
+
+See `src/core/analyzer.ts:295-365` for the complete analysis algorithm.

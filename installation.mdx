@@ -1,0 +1,414 @@
+---
+title: Installation
+description: Install Envark globally, run instantly with npx, or build from source
+---
+
+## Prerequisites
+
+Before installing Envark, ensure your system meets these requirements:
+
+<Steps>
+  <Step title="Node.js Version">
+    **Node.js 18.0.0 or higher** is required
+    
+    ```bash
+    node --version
+    # Should output v18.0.0 or higher
+    ```
+  </Step>
+  
+  <Step title="Package Manager">
+    One of: npm (comes with Node.js), yarn, pnpm, or bun
+  </Step>
+  
+  <Step title="Terminal Access">
+    A modern terminal that supports ANSI colors and Unicode characters for the best TUI experience
+  </Step>
+</Steps>
+
+<Warning>
+Envark requires Node.js 18+ as specified in `package.json` engines field. Earlier versions are not supported.
+</Warning>
+
+## Installation Methods
+
+Choose the installation method that works best for your workflow:
+
+### Quick Start (No Installation)
+
+The fastest way to try Envark - no installation required:
+
+<CodeGroup>
+```bash npm
+npx envark
+```
+
+```bash yarn  
+yarn dlx envark
+```
+
+```bash pnpm
+pnpm dlx envark
+```
+
+```bash bun
+bunx envark
+```
+</CodeGroup>
+
+<Tip>
+This method downloads and runs Envark in one command. Perfect for CI/CD pipelines or trying before installing.
+</Tip>
+
+### Global Installation
+
+Install Envark globally to run it from anywhere on your system:
+
+<CodeGroup>
+```bash npm
+npm install -g envark
+```
+
+```bash yarn
+yarn global add envark
+```
+
+```bash pnpm
+pnpm add -g envark
+```
+
+```bash bun
+bun add -g envark
+```
+</CodeGroup>
+
+After global installation, run Envark with:
+
+```bash
+envark
+```
+
+### Project-Local Installation
+
+Add Envark as a dev dependency to your project:
+
+<CodeGroup>
+```bash npm
+npm install --save-dev envark
+```
+
+```bash yarn
+yarn add --dev envark
+```
+
+```bash pnpm
+pnpm add -D envark
+```
+
+```bash bun
+bun add -d envark
+```
+</CodeGroup>
+
+Run via package.json scripts or npx:
+
+```json package.json
+{
+  "scripts": {
+    "env:check": "envark scan",
+    "env:risk": "envark risk critical",
+    "env:validate": "envark validate .env"
+  }
+}
+```
+
+<Note>
+Local installation is recommended for CI/CD integration to lock the Envark version with your project dependencies.
+</Note>
+
+### Build from Source
+
+For development or contributing to Envark:
+
+<Steps>
+  <Step title="Clone Repository">
+    ```bash
+    git clone https://github.com/yourusername/envark.git
+    cd envark
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    npm install
+    ```
+  </Step>
+  
+  <Step title="Build TypeScript">
+    ```bash
+    npm run build
+    ```
+    
+    This compiles `src/` to `dist/` using TypeScript.
+  </Step>
+  
+  <Step title="Run Development Version">
+    ```bash
+    # Run without building (uses bun)
+    npm run dev
+    
+    # Or run the built version
+    npm start
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+The `npm run dev` command uses bun to run TypeScript directly from `src/index.ts` without compilation - great for rapid development.
+</Tip>
+
+## Verify Installation
+
+Confirm Envark is installed correctly:
+
+<CodeGroup>
+```bash Check Version
+envark --version
+# Output: envark v0.1.1
+```
+
+```bash View Help
+envark help
+# Shows full command reference
+```
+
+```bash Test Interactive Mode
+envark --interactive
+# Launches the TUI interface
+```
+</CodeGroup>
+
+## MCP Server Configuration
+
+To use Envark as an MCP server with AI-powered IDEs, you need to configure your IDE:
+
+### Automatic Configuration
+
+Envark provides an `init` command that auto-configures supported IDEs:
+
+<CodeGroup>
+```bash VS Code
+envark init vscode
+# Creates .vscode/mcp.json in current directory
+```
+
+```bash Claude Desktop
+envark init claude
+# Creates ~/.claude/mcp.json
+```
+
+```bash Cursor
+envark init cursor  
+# Creates ~/.cursor/mcp.json
+```
+
+```bash Windsurf
+envark init windsurf
+# Creates ~/.windsurf/mcp.json
+```
+</CodeGroup>
+
+<Warning>
+If the config file already exists, Envark will print the configuration instead of overwriting. You'll need to manually merge the settings.
+</Warning>
+
+### Manual Configuration
+
+If automatic configuration fails or you need custom settings, manually add Envark to your IDE's MCP config:
+
+<CodeGroup>
+```json VS Code (.vscode/mcp.json)
+{
+  "servers": {
+    "envark": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "envark"]
+    }
+  }
+}
+```
+
+```json Claude/Cursor/Windsurf
+{
+  "mcpServers": {
+    "envark": {
+      "command": "npx",
+      "args": ["-y", "envark"]
+    }
+  }
+}
+```
+</CodeGroup>
+
+<Tip>
+Using `npx -y envark` ensures the latest version runs without installation. For locked versions, use a local installation and specify the path: `"command": "node_modules/.bin/envark"`
+</Tip>
+
+### Restart Your IDE
+
+After configuration, restart your IDE to load the MCP server:
+
+<Steps>
+  <Step title="Close all IDE windows" />
+  <Step title="Reopen your project" />
+  <Step title="Verify MCP connection">
+    Check your IDE's MCP server status panel. Envark should appear as "Connected".
+  </Step>
+</Steps>
+
+## Configuration Files
+
+Envark creates these files during operation:
+
+| Path | Purpose |
+|------|----------|
+| `.envark/cache.json` | Cached scan results with file hashes |
+| `.envark/ai-history.json` | AI conversation history (if using AI features) |
+
+<Note>
+Add `.envark/` to your `.gitignore` to avoid committing cache files:
+
+```bash .gitignore
+.envark/
+```
+</Note>
+
+## Environment Variables for AI Features
+
+If you plan to use Envark's AI assistant, configure your preferred provider:
+
+<CodeGroup>
+```bash OpenAI
+export OPENAI_API_KEY="sk-..."
+```
+
+```bash Anthropic Claude
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+```bash Google Gemini
+export GEMINI_API_KEY="..."
+```
+
+```bash Ollama (Local)
+export OLLAMA_MODEL="llama3.2"
+# Requires Ollama running locally
+```
+</CodeGroup>
+
+<Tip>
+You can also configure AI providers interactively in TUI mode with the `/config` command.
+</Tip>
+
+## Troubleshooting
+
+### Command Not Found
+
+If `envark` command is not recognized after global installation:
+
+```bash
+# Check npm global bin path is in your PATH
+npm config get prefix
+# Should output a directory like /usr/local or ~/.npm-global
+
+# Add to PATH if needed (add to ~/.bashrc or ~/.zshrc)
+export PATH="$(npm config get prefix)/bin:$PATH"
+```
+
+### Permission Errors
+
+On Linux/macOS, you might need sudo for global installation:
+
+```bash
+# Option 1: Use sudo (not recommended)
+sudo npm install -g envark
+
+# Option 2: Fix npm permissions (recommended)
+mkdir ~/.npm-global
+npm config set prefix '~/.npm-global'
+export PATH=~/.npm-global/bin:$PATH
+npm install -g envark
+```
+
+### Node Version Too Old
+
+Envark requires Node.js 18+. Upgrade with:
+
+<CodeGroup>
+```bash nvm
+nvm install 18
+nvm use 18
+```
+
+```bash Official Installer
+# Download from https://nodejs.org/
+# Install LTS version (18.x or higher)
+```
+</CodeGroup>
+
+### MCP Server Not Connecting
+
+<Steps>
+  <Step title="Verify config path">
+    Ensure the MCP config file is in the correct location for your IDE
+  </Step>
+  
+  <Step title="Check JSON syntax">
+    Validate your MCP config JSON has no syntax errors
+  </Step>
+  
+  <Step title="Test standalone">
+    Run `npx envark` in terminal to verify Envark works outside the IDE
+  </Step>
+  
+  <Step title="Check IDE logs">
+    Look for MCP connection errors in your IDE's developer console
+  </Step>
+</Steps>
+
+## Updating Envark
+
+Keep Envark up to date for the latest features and bug fixes:
+
+<CodeGroup>
+```bash Global Installation
+npm update -g envark
+```
+
+```bash Project-Local
+npm update envark
+```
+
+```bash Check for Updates
+npm outdated envark
+```
+</CodeGroup>
+
+<Note>
+When using `npx envark`, you always get the latest version unless you specify a version: `npx envark@0.1.1`
+</Note>
+
+## Next Steps
+
+Now that Envark is installed, learn how to use it:
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Complete tutorial from first scan to advanced features
+  </Card>
+  
+  <Card title="CLI Reference" icon="terminal" href="/cli/commands">
+    Comprehensive command-line documentation
+  </Card>
+</CardGroup>

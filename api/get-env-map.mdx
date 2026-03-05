@@ -1,0 +1,182 @@
+---
+title: "get_env_map"
+description: "Returns the complete environment variable map for the project with optional filtering"
+---
+
+## Overview
+
+The `get_env_map` tool provides a comprehensive overview of all environment variables in your project. It scans the codebase, resolves variable definitions and usages, and returns a complete map with optional filtering by status.
+
+## Parameters
+
+<ParamField path="projectPath" type="string" optional>
+  Path to the project directory. Defaults to current working directory.
+</ParamField>
+
+<ParamField path="filter" type="string" optional>
+  Filter variables by status. Defaults to "all".
+  
+  **Options:**
+  - `all` - Show all environment variables
+  - `missing` - Variables used in code but not defined anywhere
+  - `unused` - Variables defined in .env files but never used
+  - `risky` - Variables with critical or high risk level
+  - `undocumented` - Variables used in code but not documented
+</ParamField>
+
+## Response
+
+<ResponseField name="summary" type="object" required>
+  Statistical summary of environment variables
+  
+  <Expandable title="properties">
+    <ResponseField name="totalEnvVars" type="number">
+      Total number of unique environment variables found
+    </ResponseField>
+    <ResponseField name="defined" type="number">
+      Number of variables defined in .env files
+    </ResponseField>
+    <ResponseField name="used" type="number">
+      Number of variables used in code
+    </ResponseField>
+    <ResponseField name="missing" type="number">
+      Number of variables missing from .env files
+    </ResponseField>
+    <ResponseField name="undocumented" type="number">
+      Number of variables lacking documentation
+    </ResponseField>
+    <ResponseField name="dead" type="number">
+      Number of unused (dead) variables
+    </ResponseField>
+    <ResponseField name="critical" type="number">
+      Number of variables with critical risk level
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="variables" type="array" required>
+  Array of environment variable summaries
+  
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">
+      Variable name
+    </ResponseField>
+    <ResponseField name="definedIn" type="string[]">
+      Files where the variable is defined
+    </ResponseField>
+    <ResponseField name="usedIn" type="string[]">
+      Files where the variable is used (limited to first 5)
+    </ResponseField>
+    <ResponseField name="languages" type="string[]">
+      Programming languages using this variable
+    </ResponseField>
+    <ResponseField name="hasDefault" type="boolean">
+      Whether the variable has a default value in code
+    </ResponseField>
+    <ResponseField name="isDocumented" type="boolean">
+      Whether the variable is documented in .env.example
+    </ResponseField>
+    <ResponseField name="riskLevel" type="string">
+      Risk level: info, low, medium, high, or critical
+    </ResponseField>
+    <ResponseField name="issueCount" type="number">
+      Number of issues detected for this variable
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="metadata" type="object" required>
+  Scan metadata
+  
+  <Expandable title="properties">
+    <ResponseField name="projectPath" type="string">
+      Absolute path to the scanned project
+    </ResponseField>
+    <ResponseField name="scannedFiles" type="number">
+      Number of files scanned
+    </ResponseField>
+    <ResponseField name="cacheHit" type="boolean">
+      Whether the scan used cached results
+    </ResponseField>
+    <ResponseField name="duration" type="number">
+      Scan duration in milliseconds
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Response
+
+```json
+{
+  "summary": {
+    "totalEnvVars": 42,
+    "defined": 38,
+    "used": 40,
+    "missing": 2,
+    "undocumented": 5,
+    "dead": 2,
+    "critical": 1
+  },
+  "variables": [
+    {
+      "name": "DATABASE_URL",
+      "definedIn": [".env", ".env.example"],
+      "usedIn": ["src/db/connection.ts", "src/config/database.ts"],
+      "languages": ["typescript"],
+      "hasDefault": false,
+      "isDocumented": true,
+      "riskLevel": "high",
+      "issueCount": 0
+    },
+    {
+      "name": "API_KEY",
+      "definedIn": [],
+      "usedIn": ["src/api/client.ts"],
+      "languages": ["typescript"],
+      "hasDefault": false,
+      "isDocumented": false,
+      "riskLevel": "critical",
+      "issueCount": 2
+    }
+  ],
+  "metadata": {
+    "projectPath": "/Users/dev/my-project",
+    "scannedFiles": 156,
+    "cacheHit": false,
+    "duration": 234
+  }
+}
+```
+
+## Usage Example
+
+AI assistants can call this tool to get a comprehensive overview of all environment variables:
+
+```json
+{
+  "name": "get_env_map",
+  "arguments": {
+    "projectPath": "/path/to/project",
+    "filter": "missing"
+  }
+}
+```
+
+To find only risky variables:
+
+```json
+{
+  "name": "get_env_map",
+  "arguments": {
+    "filter": "risky"
+  }
+}
+```
+
+## Use Cases
+
+- **Environment Audit**: Get a complete overview of all environment variables and their status
+- **Finding Missing Variables**: Identify variables used in code but not defined in .env files
+- **Cleanup**: Find unused variables that can be safely removed
+- **Security Review**: Filter for risky or undocumented variables
+- **Documentation**: Discover which variables need to be added to .env.example

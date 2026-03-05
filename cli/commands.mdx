@@ -1,0 +1,429 @@
+---
+title: CLI Commands
+description: Complete reference for all Envark CLI commands, flags, and arguments
+---
+
+## Overview
+
+Envark provides multiple execution modes to fit your workflow:
+
+- **Interactive TUI** - Full-featured terminal interface
+- **Direct Commands** - Run individual commands from the shell
+- **MCP Server** - Background service for AI assistants
+
+## Usage Patterns
+
+<CodeGroup>
+
+```bash npm
+# Launch interactive TUI
+npx envark
+
+# Run a specific command
+npx envark scan
+
+# Start MCP server (automatic)
+echo "" | npx envark
+```
+
+```bash pnpm
+# Launch interactive TUI
+pnpm dlx envark
+
+# Run a specific command
+pnpm dlx envark scan
+
+# Start MCP server (automatic)
+echo "" | pnpm dlx envark
+```
+
+```bash bun
+# Launch interactive TUI
+bunx envark
+
+# Run a specific command
+bunx envark scan
+
+# Start MCP server (automatic)
+echo "" | bunx envark
+```
+
+```bash Global
+# Install globally
+npm install -g envark
+
+# Launch interactive TUI
+envark
+
+# Run a specific command
+envark scan
+```
+
+</CodeGroup>
+
+## Command Reference
+
+### envark
+
+Launches the interactive TUI or starts the MCP server based on context.
+
+```bash
+envark
+```
+
+**Behavior:**
+- If `stdin` is a TTY (interactive terminal): Launch full TUI mode
+- If `stdin` is piped: Start MCP server for AI assistant integration
+- No arguments required
+
+**Exit codes:**
+- `0` - Success
+- `1` - Fatal error
+
+---
+
+### envark -i, --interactive
+
+Explicitly launch interactive TUI mode.
+
+```bash
+envark -i
+envark --interactive
+envark tui
+```
+
+**Aliases:**
+- `-i`
+- `--interactive`
+- `tui`
+
+**Features:**
+- Persistent readline interface
+- Command history (100 entries)
+- Tab completion
+- Dropdown command menu (`/`)
+- Real-time output rendering
+
+---
+
+### envark init
+
+Initialize MCP configuration for AI assistants.
+
+```bash
+envark init <ide>
+```
+
+<ParamField path="ide" type="string" required>
+  Target IDE or AI assistant platform.
+  
+  **Options:**
+  - `claude` - Claude Desktop (default)
+  - `cursor` - Cursor editor
+  - `vscode` - Visual Studio Code
+  - `windsurf` - Windsurf IDE
+</ParamField>
+
+**Examples:**
+
+<CodeGroup>
+
+```bash VS Code
+envark init vscode
+# Creates: .vscode/mcp.json
+```
+
+```bash Claude Desktop
+envark init claude
+# Creates: ~/.claude/mcp.json
+```
+
+```bash Cursor
+envark init cursor
+# Creates: ~/.cursor/mcp.json
+```
+
+```bash Windsurf
+envark init windsurf
+# Creates: ~/.windsurf/mcp.json
+```
+
+</CodeGroup>
+
+**Configuration generated:**
+
+```json VS Code Format
+{
+  "servers": {
+    "envark": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["envark"]
+    }
+  }
+}
+```
+
+```json Claude/Cursor/Windsurf Format
+{
+  "mcpServers": {
+    "envark": {
+      "command": "npx",
+      "args": ["envark"]
+    }
+  }
+}
+```
+
+**Error handling:**
+- If config file exists: Prints manual instructions without overwriting
+- If directory doesn't exist: Creates parent directories automatically
+- Invalid IDE: Exits with code `1` and lists valid options
+
+---
+
+### envark help
+
+Display help information.
+
+```bash
+envark help
+envark --help
+envark -h
+```
+
+**Aliases:**
+- `help`
+- `--help`
+- `-h`
+
+Shows complete usage information including:
+- Command list
+- Supported IDEs
+- Usage examples
+- Documentation links
+
+---
+
+### envark version
+
+Display version information.
+
+```bash
+envark version
+envark --version
+envark -v
+```
+
+**Aliases:**
+- `version`
+- `--version`
+- `-v`
+
+**Output:**
+```
+argis v0.1.0
+```
+
+<Note>
+Note: The output currently shows "argis" - this is a known issue in the source code at src/index.ts:285.
+</Note>
+
+---
+
+## Direct Command Execution
+
+All TUI commands can be executed directly from the shell:
+
+```bash
+# Scan project
+envark scan
+
+# Analyze risks
+envark risk high
+
+# Find missing variables
+envark missing
+
+# Validate .env file
+envark validate .env
+
+# Generate template
+envark generate .env.example
+```
+
+See [TUI Commands](/cli/tui-commands) for detailed documentation of each command.
+
+---
+
+## Exit Codes
+
+| Code | Meaning |
+|------|----------|
+| `0` | Successful execution |
+| `1` | Fatal error or invalid arguments |
+
+**Common error scenarios:**
+- Unknown IDE in `init` command
+- File system errors during config creation
+- Unhandled exceptions in tool execution
+- Invalid command arguments
+
+---
+
+## Environment Variables
+
+Envark respects these environment variables:
+
+<ParamField path="OPENAI_API_KEY" type="string">
+  OpenAI API key for AI assistant features.
+  
+  Used by: AI commands (`/ask`, `/analyze`, etc.)
+</ParamField>
+
+<ParamField path="ANTHROPIC_API_KEY" type="string">
+  Anthropic API key for Claude integration.
+  
+  Used by: AI commands when OpenAI is not configured
+</ParamField>
+
+<ParamField path="GEMINI_API_KEY" type="string">
+  Google Gemini API key.
+  
+  Alternative name: `GOOGLE_API_KEY`
+  
+  Used by: AI commands when OpenAI/Anthropic not configured
+</ParamField>
+
+<ParamField path="OLLAMA_MODEL" type="string">
+  Ollama model name for local AI.
+  
+  Default: `llama3.2`
+  
+  Used by: AI commands as fallback (no API key required)
+</ParamField>
+
+---
+
+## Signal Handling
+
+Envark gracefully handles termination signals:
+
+**SIGINT (Ctrl+C):**
+- In TUI mode: Displays goodbye message and exits
+- In MCP mode: Closes server connection cleanly
+
+**SIGTERM:**
+- Closes MCP server connection
+- Exits with code `0`
+
+---
+
+## Working Directory
+
+All commands operate on the current working directory by default:
+
+```bash
+# Scan current directory
+envark scan
+
+# Scan specific directory
+cd /path/to/project
+envark scan
+```
+
+In TUI mode, use the `cd` command to change directories:
+
+```bash
+# Inside TUI
+❯ cd ../other-project
+❯ scan
+```
+
+---
+
+## Performance
+
+Typical command execution times:
+
+| Project Size | Scan Time | Risk Analysis | Validation |
+|--------------|-----------|---------------|-----------|
+| Small (< 50 files) | < 500ms | < 200ms | < 100ms |
+| Medium (50-500 files) | < 2s | < 1s | < 500ms |
+| Large (> 500 files) | 2-5s | 1-3s | < 1s |
+
+**Caching:**
+- Results cached in `.envark/cache.json`
+- Cache invalidated on file changes
+- Reduces subsequent scan times by 80%+
+
+---
+
+## Examples
+
+### Quick Project Audit
+
+```bash
+# Run all critical checks
+envark scan
+envark risk critical
+envark missing
+envark validate .env
+```
+
+### CI/CD Integration
+
+```yaml GitHub Actions
+name: Env Validation
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      
+      - name: Check for missing env vars
+        run: npx envark missing
+      
+      - name: Validate production .env
+        run: npx envark validate .env.production
+      
+      - name: Check for high-risk issues
+        run: npx envark risk high
+```
+
+### Pre-commit Hook
+
+```bash .git/hooks/pre-commit
+#!/bin/sh
+
+# Validate env files before commit
+npx envark validate .env.example
+
+if [ $? -ne 0 ]; then
+  echo "❌ .env.example validation failed"
+  exit 1
+fi
+
+echo "✅ Environment validation passed"
+```
+
+### Docker Integration
+
+```dockerfile Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+# Validate env configuration
+RUN npx envark validate .env.production
+RUN npx envark risk critical
+
+CMD ["npm", "start"]
+```

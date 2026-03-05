@@ -1,0 +1,875 @@
+---
+title: Configuration
+description: Configuration options, settings files, and environment variables for Envark
+---
+
+## Overview
+
+Envark's behavior can be customized through configuration files, environment variables, and runtime settings.
+
+## Configuration Files
+
+### ~/.envark/ai-config.json
+
+Stores persisted AI provider settings.
+
+**Location:** `~/.envark/ai-config.json`
+
+**Structure:**
+
+```json
+{
+  "provider": "openai",
+  "apiKey": "sk-proj-...",
+  "model": "gpt-4o",
+  "baseUrl": "https://api.openai.com/v1",
+  "lastUpdated": "2024-03-05T14:30:00.000Z"
+}
+```
+
+**Fields:**
+
+<ParamField path="provider" type="enum" required>
+  AI provider name.
+  
+  **Options:** `openai`, `anthropic`, `gemini`, `ollama`
+</ParamField>
+
+<ParamField path="apiKey" type="string">
+  API key for the provider.
+  
+  **Required for:** OpenAI, Anthropic, Gemini
+  
+  **Optional for:** Ollama
+</ParamField>
+
+<ParamField path="model" type="string">
+  Specific model identifier.
+  
+  **Examples:**
+  - `gpt-4o` (OpenAI)
+  - `claude-sonnet-4-20250514` (Anthropic)
+  - `gemini-1.5-pro` (Gemini)
+  - `llama3.2` (Ollama)
+</ParamField>
+
+<ParamField path="baseUrl" type="string">
+  Custom API base URL.
+  
+  **Use cases:**
+  - OpenAI-compatible endpoints
+  - Ollama custom port
+  - API proxies
+  
+  **Default:** Provider-specific default URL
+</ParamField>
+
+<ParamField path="lastUpdated" type="string">
+  ISO 8601 timestamp of last configuration update.
+  
+  Automatically set by Envark.
+</ParamField>
+
+**Creating manually:**
+
+```bash
+mkdir -p ~/.envark
+cat > ~/.envark/ai-config.json << 'EOF'
+{
+  "provider": "openai",
+  "apiKey": "sk-proj-...",
+  "model": "gpt-4o",
+  "lastUpdated": "2024-03-05T14:30:00.000Z"
+}
+EOF
+chmod 600 ~/.envark/ai-config.json
+```
+
+**Clearing configuration:**
+
+```bash
+# From TUI
+❯ /config clear
+
+# From shell
+rm ~/.envark/ai-config.json
+```
+
+---
+
+### .envark/cache.json
+
+Project-specific scan result cache.
+
+**Location:** `<project>/.envark/cache.json`
+
+**Purpose:**
+- Cache scan results for performance
+- Reduce analysis time by 80%+
+- Invalidated on file changes
+
+**Structure:**
+
+```json
+{
+  "version": "0.1.0",
+  "timestamp": "2024-03-05T14:30:00.000Z",
+  "projectPath": "/home/user/project",
+  "fileHashes": {
+    "src/index.ts": "abc123...",
+    ".env": "def456..."
+  },
+  "scanResults": {
+    "usages": [...],
+    "definitions": [...],
+    "variables": [...]
+  }
+}
+```
+
+**Cache invalidation:**
+- File modified (hash changed)
+- File added/removed
+- `.env*` file changed
+- Manual deletion
+
+**Disabling cache:**
+
+```bash
+# Delete cache directory
+rm -rf .envark/
+
+# Add to .gitignore
+echo ".envark/" >> .gitignore
+```
+
+**Cache clearing:**
+
+```bash
+# From shell
+rm -rf .envark/cache.json
+
+# Automatically cleared on next scan
+```
+
+---
+
+### MCP Configuration
+
+Configuration for AI assistant integration.
+
+#### VS Code (.vscode/mcp.json)
+
+**Location:** `<project>/.vscode/mcp.json`
+
+**Format:**
+
+```json
+{
+  "servers": {
+    "envark": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["envark"]
+    }
+  }
+}
+```
+
+**Alternative with local installation:**
+
+```json
+{
+  "servers": {
+    "envark": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./node_modules/envark/dist/index.js"]
+    }
+  }
+}
+```
+
+**With specific version:**
+
+```json
+{
+  "servers": {
+    "envark": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["envark@0.1.0"]
+    }
+  }
+}
+```
+
+---
+
+#### Claude Desktop (~/.claude/mcp.json)
+
+**Location:** `~/.claude/mcp.json` (macOS/Linux) or `%APPDATA%\.claude\mcp.json` (Windows)
+
+**Format:**
+
+```json
+{
+  "mcpServers": {
+    "envark": {
+      "command": "npx",
+      "args": ["envark"]
+    }
+  }
+}
+```
+
+**With environment variables:**
+
+```json
+{
+  "mcpServers": {
+    "envark": {
+      "command": "npx",
+      "args": ["envark"],
+      "env": {
+        "NODE_ENV": "production",
+        "DEBUG": "envark:*"
+      }
+    }
+  }
+}
+```
+
+---
+
+#### Cursor (~/.cursor/mcp.json)
+
+**Location:** `~/.cursor/mcp.json`
+
+**Format:** Same as Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "envark": {
+      "command": "npx",
+      "args": ["envark"]
+    }
+  }
+}
+```
+
+---
+
+#### Windsurf (~/.windsurf/mcp.json)
+
+**Location:** `~/.windsurf/mcp.json`
+
+**Format:** Same as Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "envark": {
+      "command": "npx",
+      "args": ["envark"]
+    }
+  }
+}
+```
+
+---
+
+## Environment Variables
+
+### AI Provider Configuration
+
+<ParamField path="OPENAI_API_KEY" type="string">
+  OpenAI API key.
+  
+  **Format:** `sk-proj-...` or `sk-...`
+  
+  **Example:** `sk-proj-abc123def456...`
+  
+  **Required for:** OpenAI models (GPT-4, GPT-4o, etc.)
+</ParamField>
+
+<ParamField path="ANTHROPIC_API_KEY" type="string">
+  Anthropic API key.
+  
+  **Format:** `sk-ant-...`
+  
+  **Example:** `sk-ant-api03-abc123def456...`
+  
+  **Required for:** Claude models
+</ParamField>
+
+<ParamField path="GEMINI_API_KEY" type="string">
+  Google Gemini API key.
+  
+  **Alternative name:** `GOOGLE_API_KEY`
+  
+  **Format:** `AIza...`
+  
+  **Example:** `AIzaSyAbc123Def456...`
+  
+  **Required for:** Gemini models
+</ParamField>
+
+<ParamField path="OLLAMA_MODEL" type="string" default="llama3.2">
+  Default Ollama model to use.
+  
+  **Examples:**
+  - `llama3.2` (default)
+  - `llama3.1`
+  - `mistral`
+  - `codellama`
+  
+  **Optional** - falls back to llama3.2
+</ParamField>
+
+<ParamField path="OLLAMA_BASE_URL" type="string" default="http://localhost:11434">
+  Ollama API base URL.
+  
+  **Use cases:**
+  - Custom Ollama port
+  - Remote Ollama server
+  - Ollama behind proxy
+  
+  **Example:** `http://192.168.1.100:11434`
+</ParamField>
+
+---
+
+### Application Settings
+
+<ParamField path="NODE_ENV" type="string" default="development">
+  Node.js environment mode.
+  
+  **Options:**
+  - `development` - Development mode
+  - `production` - Production mode
+  - `test` - Testing mode
+  
+  **Effect on Envark:** Minimal (used for logging verbosity)
+</ParamField>
+
+<ParamField path="DEBUG" type="string">
+  Debug logging pattern.
+  
+  **Examples:**
+  - `envark:*` - All Envark debug logs
+  - `envark:scanner` - Scanner debug only
+  - `envark:ai` - AI debug only
+  
+  **Default:** No debug output
+</ParamField>
+
+---
+
+## Provider-Specific Configuration
+
+### OpenAI Configuration
+
+**Environment variables:**
+
+```bash
+# Required
+export OPENAI_API_KEY="sk-proj-..."
+
+# Optional
+export OPENAI_ORG_ID="org-..."
+export OPENAI_BASE_URL="https://api.openai.com/v1"
+```
+
+**Recommended models:**
+
+<CodeGroup>
+
+```bash Balanced (Recommended)
+/config openai sk-proj-... gpt-4o
+```
+
+```bash Fast & Cheap
+/config openai sk-proj-... gpt-4o-mini
+```
+
+```bash Maximum Context
+/config openai sk-proj-... gpt-4-turbo
+```
+
+</CodeGroup>
+
+**Custom endpoint:**
+
+```json ~/.envark/ai-config.json
+{
+  "provider": "openai",
+  "apiKey": "sk-...",
+  "model": "gpt-4o",
+  "baseUrl": "https://your-proxy.com/v1"
+}
+```
+
+---
+
+### Anthropic Configuration
+
+**Environment variables:**
+
+```bash
+# Required
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Optional
+export ANTHROPIC_BASE_URL="https://api.anthropic.com"
+```
+
+**Recommended models:**
+
+<CodeGroup>
+
+```bash Balanced (Recommended)
+/config anthropic sk-ant-... claude-sonnet-4-20250514
+```
+
+```bash Maximum Capability
+/config anthropic sk-ant-... claude-opus-4-20250514
+```
+
+```bash Fast & Efficient
+/config anthropic sk-ant-... claude-3-5-sonnet-20241022
+```
+
+</CodeGroup>
+
+---
+
+### Google Gemini Configuration
+
+**Environment variables:**
+
+```bash
+# Required (either name works)
+export GEMINI_API_KEY="AIza..."
+# or
+export GOOGLE_API_KEY="AIza..."
+```
+
+**Recommended models:**
+
+<CodeGroup>
+
+```bash Balanced (Recommended)
+/config gemini AIza... gemini-1.5-pro
+```
+
+```bash Fast
+/config gemini AIza... gemini-1.5-flash
+```
+
+</CodeGroup>
+
+**API key creation:**
+
+1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Click "Create API Key"
+3. Copy key (format: `AIza...`)
+
+---
+
+### Ollama Configuration
+
+**Installation:**
+
+<CodeGroup>
+
+```bash macOS
+brew install ollama
+ollama serve
+```
+
+```bash Linux
+curl -fsSL https://ollama.com/install.sh | sh
+ollama serve
+```
+
+```bash Docker
+docker run -d -p 11434:11434 --name ollama ollama/ollama
+```
+
+</CodeGroup>
+
+**Pull models:**
+
+```bash
+# Recommended for Envark
+ollama pull llama3.2
+
+# Alternatives
+ollama pull llama3.1
+ollama pull mistral
+ollama pull codellama
+```
+
+**Configuration:**
+
+```bash
+# Default (localhost)
+/config ollama llama3.2
+
+# Remote server
+export OLLAMA_BASE_URL="http://192.168.1.100:11434"
+/config ollama llama3.2
+```
+
+**Custom port:**
+
+```bash
+# Start Ollama on custom port
+OLLAMA_HOST=0.0.0.0:8080 ollama serve
+
+# Configure Envark
+export OLLAMA_BASE_URL="http://localhost:8080"
+/config ollama
+```
+
+---
+
+## Configuration Precedence
+
+Settings are loaded in this order (later overrides earlier):
+
+1. **Default values**
+   - Built-in defaults
+   - Model defaults per provider
+
+2. **Environment variables**
+   - `OPENAI_API_KEY`
+   - `ANTHROPIC_API_KEY`
+   - `GEMINI_API_KEY`
+   - `OLLAMA_MODEL`
+
+3. **Persisted config file**
+   - `~/.envark/ai-config.json`
+   - Written by `/config` command
+
+4. **Runtime configuration**
+   - `/config` command in TUI
+   - Overrides all previous settings
+
+**Example precedence:**
+
+```bash
+# 1. Environment variable (lowest priority)
+export OPENAI_API_KEY="sk-old-key"
+
+# 2. Persisted config (higher priority)
+cat ~/.envark/ai-config.json
+{
+  "provider": "openai",
+  "apiKey": "sk-newer-key",
+  "model": "gpt-4o"
+}
+
+# 3. Runtime command (highest priority)
+❯ /config openai sk-newest-key gpt-4o-mini
+
+# Final config uses: sk-newest-key with gpt-4o-mini
+```
+
+---
+
+## Security Best Practices
+
+### API Key Storage
+
+**Recommended:**
+
+<CodeGroup>
+
+```bash Environment Variables
+# In ~/.bashrc or ~/.zshrc
+export OPENAI_API_KEY="sk-proj-..."
+
+# Or use direnv
+echo 'export OPENAI_API_KEY="sk-proj-..."' > .envrc
+direnv allow
+```
+
+```bash System Keychain (macOS)
+# Store in keychain
+security add-generic-password \
+  -a "$USER" \
+  -s "envark-openai" \
+  -w "sk-proj-..."
+
+# Retrieve in shell
+export OPENAI_API_KEY=$(security find-generic-password \
+  -a "$USER" \
+  -s "envark-openai" \
+  -w)
+```
+
+```bash Secret Manager
+# AWS Secrets Manager
+export OPENAI_API_KEY=$(aws secretsmanager get-secret-value \
+  --secret-id envark/openai-key \
+  --query SecretString \
+  --output text)
+
+# 1Password CLI
+export OPENAI_API_KEY=$(op read "op://Personal/OpenAI/api-key")
+```
+
+</CodeGroup>
+
+**Not recommended:**
+
+```bash
+# Don't commit API keys
+cat > .env << 'EOF'
+OPENAI_API_KEY=sk-proj-...  # ❌ Never commit this
+EOF
+git add .env  # ❌ Very bad!
+```
+
+---
+
+### File Permissions
+
+**AI config file:**
+
+```bash
+# Set restrictive permissions
+chmod 600 ~/.envark/ai-config.json
+
+# Verify
+ls -la ~/.envark/ai-config.json
+# Output: -rw------- 1 user user 256 Mar 5 14:30 ai-config.json
+```
+
+**MCP config files:**
+
+```bash
+# VS Code config (project-specific)
+chmod 644 .vscode/mcp.json  # OK to commit
+
+# Claude/Cursor config (global)
+chmod 600 ~/.claude/mcp.json
+chmod 600 ~/.cursor/mcp.json
+```
+
+---
+
+### Git Ignore Rules
+
+**Add to `.gitignore`:**
+
+```gitignore .gitignore
+# Envark cache
+.envark/
+
+# Local AI config (if stored in project)
+.envark-config.json
+ai-config.json
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+
+# Keep examples
+!.env.example
+```
+
+---
+
+## Troubleshooting
+
+### Configuration Not Loading
+
+**Check file exists:**
+
+```bash
+ls -la ~/.envark/ai-config.json
+```
+
+**Validate JSON syntax:**
+
+```bash
+jq . ~/.envark/ai-config.json
+```
+
+**Check permissions:**
+
+```bash
+stat -c "%a" ~/.envark/ai-config.json  # Should be 600
+```
+
+---
+
+### API Key Issues
+
+**Verify key is set:**
+
+```bash
+echo $OPENAI_API_KEY | cut -c1-10
+# Output: sk-proj-ab...
+```
+
+**Test key validity:**
+
+```bash
+curl https://api.openai.com/v1/models \
+  -H "Authorization: Bearer $OPENAI_API_KEY"
+```
+
+**Common errors:**
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `401 Unauthorized` | Invalid API key | Check key format, regenerate if needed |
+| `429 Rate Limit` | Too many requests | Wait and retry, upgrade plan |
+| `403 Forbidden` | Insufficient permissions | Check API key permissions |
+
+---
+
+### Ollama Connection Issues
+
+**Check Ollama is running:**
+
+```bash
+curl http://localhost:11434/api/tags
+```
+
+**Start Ollama:**
+
+```bash
+# macOS/Linux
+ollama serve
+
+# Docker
+docker start ollama
+```
+
+**Test model availability:**
+
+```bash
+ollama list
+# Should show llama3.2
+```
+
+---
+
+### Cache Issues
+
+**Clear project cache:**
+
+```bash
+rm -rf .envark/cache.json
+```
+
+**Verify cache directory:**
+
+```bash
+ls -la .envark/
+```
+
+**Disable caching (debugging):**
+
+```bash
+# Remove cache directory
+rm -rf .envark/
+
+# Prevent recreation
+touch .envark
+```
+
+---
+
+## Advanced Configuration
+
+### Custom Ollama Base URL
+
+```json ~/.envark/ai-config.json
+{
+  "provider": "ollama",
+  "model": "llama3.2",
+  "baseUrl": "http://192.168.1.100:11434"
+}
+```
+
+### OpenAI-Compatible Endpoints
+
+```json ~/.envark/ai-config.json
+{
+  "provider": "openai",
+  "apiKey": "your-key",
+  "model": "gpt-4o",
+  "baseUrl": "https://your-openai-compatible-api.com/v1"
+}
+```
+
+**Compatible with:**
+- Azure OpenAI Service
+- OpenRouter
+- LocalAI
+- LM Studio
+- Anything OpenAI-compatible
+
+---
+
+## Configuration Examples
+
+### Development Setup
+
+```bash ~/.bashrc
+# AI providers
+export OPENAI_API_KEY="sk-proj-..."
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Prefer OpenAI for development
+export ENVARK_DEFAULT_PROVIDER="openai"
+
+# Enable debug logs
+export DEBUG="envark:*"
+```
+
+### CI/CD Setup
+
+```yaml .github/workflows/env-check.yml
+env:
+  # No AI needed for basic checks
+  ENVARK_DISABLE_AI: "true"
+
+steps:
+  - name: Validate env files
+    run: npx envark validate .env.example
+  
+  - name: Check for missing vars
+    run: npx envark missing
+```
+
+### Team Shared Config
+
+```bash scripts/setup-envark.sh
+#!/bin/bash
+# Team-wide Envark setup script
+
+# Create config directory
+mkdir -p ~/.envark
+
+# Set up AI (Ollama for free usage)
+cat > ~/.envark/ai-config.json << 'EOF'
+{
+  "provider": "ollama",
+  "model": "llama3.2",
+  "baseUrl": "http://localhost:11434"
+}
+EOF
+
+chmod 600 ~/.envark/ai-config.json
+
+echo "✅ Envark configured for team usage"
+```

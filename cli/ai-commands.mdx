@@ -1,0 +1,839 @@
+---
+title: AI Commands
+description: AI-powered analysis and recommendations using OpenAI, Anthropic, Gemini, or Ollama
+---
+
+## Overview
+
+Envark includes a powerful AI assistant that provides intelligent analysis, security recommendations, and environment configuration generation. The AI can use OpenAI, Anthropic Claude, Google Gemini, or local Ollama models.
+
+<Note>
+AI commands are only available in interactive TUI mode (`envark -i`).
+</Note>
+
+## Configuration
+
+Before using AI commands, configure your preferred provider.
+
+### /config
+
+Configure AI provider settings.
+
+```bash
+/config <provider> [api-key] [model]
+```
+
+<ParamField path="provider" type="enum" required>
+  AI provider to use.
+  
+  **Options:**
+  - `openai` - OpenAI (GPT models)
+  - `anthropic` - Anthropic (Claude models)
+  - `gemini` - Google Gemini
+  - `ollama` - Ollama (local)
+</ParamField>
+
+<ParamField path="api-key" type="string">
+  API key for the provider.
+  
+  **Required for:** `openai`, `anthropic`, `gemini`
+  
+  **Not needed for:** `ollama`
+</ParamField>
+
+<ParamField path="model" type="string">
+  Specific model to use.
+  
+  **Optional** - defaults to provider's recommended model.
+</ParamField>
+
+**Examples:**
+
+<CodeGroup>
+
+```bash OpenAI
+❯ /config openai sk-proj-xxx gpt-4o
+# or use default model
+❯ /config openai sk-proj-xxx
+
+✅ OpenAI configured
+   Model: gpt-4o
+```
+
+```bash Anthropic Claude
+❯ /config anthropic sk-ant-xxx claude-sonnet-4-20250514
+# or use default model
+❯ /config anthropic sk-ant-xxx
+
+✅ Anthropic configured
+   Model: claude-sonnet-4-20250514
+```
+
+```bash Google Gemini
+❯ /config gemini AIza... gemini-1.5-pro
+# or use default model
+❯ /config gemini AIza...
+
+✅ Gemini configured
+   Model: gemini-1.5-pro
+```
+
+```bash Ollama (Local)
+❯ /config ollama llama3.2
+# or use default base URL
+❯ /config ollama
+
+✅ Ollama configured
+   Model: llama3.2
+   Base URL: http://localhost:11434
+```
+
+</CodeGroup>
+
+**Configuration persistence:**
+- Settings saved to `~/.envark/ai-config.json`
+- Persists across sessions
+- Can be cleared with `/config clear`
+
+---
+
+## Environment Variable Configuration
+
+Alternatively, set environment variables instead of using `/config`:
+
+```bash .env
+# OpenAI (highest priority)
+OPENAI_API_KEY=sk-proj-...
+
+# Anthropic Claude (if OpenAI not set)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Google Gemini (if OpenAI/Anthropic not set)
+GEMINI_API_KEY=AIza...
+# or
+GOOGLE_API_KEY=AIza...
+
+# Ollama model (fallback if no API keys set)
+OLLAMA_MODEL=llama3.2
+```
+
+**Priority order:**
+1. Persisted config (`~/.envark/ai-config.json`)
+2. Environment variables
+3. Auto-detect (OpenAI → Anthropic → Gemini → Ollama)
+
+---
+
+## Supported Models
+
+### OpenAI
+
+<ParamField path="gpt-4o" type="string" default>
+  Latest GPT-4 Optimized model (recommended).
+  
+  **Best for:** Comprehensive analysis, code generation
+</ParamField>
+
+<ParamField path="gpt-4o-mini" type="string">
+  Faster, cost-effective GPT-4 model.
+  
+  **Best for:** Quick queries, simple recommendations
+</ParamField>
+
+<ParamField path="gpt-4-turbo" type="string">
+  GPT-4 Turbo with 128K context.
+  
+  **Best for:** Large projects, detailed analysis
+</ParamField>
+
+### Anthropic
+
+<ParamField path="claude-sonnet-4-20250514" type="string" default>
+  Latest Claude 4 Sonnet (recommended).
+  
+  **Best for:** Deep security analysis, explanations
+</ParamField>
+
+<ParamField path="claude-opus-4-20250514" type="string">
+  Most capable Claude model.
+  
+  **Best for:** Complex reasoning, comprehensive reports
+</ParamField>
+
+<ParamField path="claude-3-5-sonnet-20241022" type="string">
+  Claude 3.5 Sonnet.
+  
+  **Best for:** Balanced performance and cost
+</ParamField>
+
+### Google Gemini
+
+<ParamField path="gemini-1.5-pro" type="string" default>
+  Gemini 1.5 Pro (recommended).
+  
+  **Best for:** Multi-modal analysis, long context
+</ParamField>
+
+<ParamField path="gemini-1.5-flash" type="string">
+  Faster Gemini model.
+  
+  **Best for:** Quick responses, simple queries
+</ParamField>
+
+### Ollama (Local)
+
+<ParamField path="llama3.2" type="string" default>
+  Llama 3.2 (recommended).
+  
+  **Best for:** Privacy, offline usage
+</ParamField>
+
+<ParamField path="llama3.1" type="string">
+  Llama 3.1 model.
+</ParamField>
+
+<ParamField path="mistral" type="string">
+  Mistral model.
+</ParamField>
+
+<ParamField path="codellama" type="string">
+  Code-specialized Llama.
+  
+  **Best for:** Code generation, validation
+</ParamField>
+
+---
+
+## AI Analysis Commands
+
+### /ask
+
+Ask the AI assistant a question about environment variables.
+
+```bash
+/ask <question>
+```
+
+**Aliases:** `a`
+
+<ParamField path="question" type="string" required>
+  Your question for the AI assistant.
+</ParamField>
+
+**Examples:**
+
+```bash
+❯ /ask What are best practices for storing database URLs?
+❯ /ask How should I handle API keys in production?
+❯ /ask What's the difference between .env and .env.local?
+❯ /ask Should I commit .env.example to git?
+```
+
+**Response format:**
+Markdown-formatted answer with:
+- Explanations
+- Code examples
+- Security recommendations
+- Best practices
+
+**Example response:**
+```markdown
+**Best Practices for Database URLs:**
+
+1. **Never commit database credentials**
+   - Add `.env` to `.gitignore`
+   - Use `.env.example` with placeholder values
+
+2. **Use connection pooling**
+   ```typescript
+   const pool = new Pool({
+     connectionString: process.env.DATABASE_URL,
+     max: 20
+   })
+   ```
+
+3. **Production considerations**
+   - Use SSL/TLS: `?sslmode=require`
+   - Set connection timeouts
+   - Enable connection pooling
+...
+```
+
+---
+
+### /analyze
+
+Run AI-powered security analysis on your project.
+
+```bash
+/analyze
+```
+
+**Aliases:** `an`
+
+**Analysis includes:**
+- Security vulnerability assessment
+- Missing critical variables
+- Hardcoded secrets detection
+- Configuration improvement suggestions
+- Environment-specific recommendations
+
+**Example:**
+
+```bash
+❯ /analyze
+# or
+❯ an
+```
+
+**Output:**
+```markdown
+## Security Analysis
+
+### Critical Issues (2)
+
+1. **JWT_SECRET missing**
+   - Used in: src/auth/jwt.ts, src/middleware/auth.ts
+   - Risk: Authentication will fail in production
+   - Recommendation: Generate strong secret with `openssl rand -base64 32`
+
+2. **DATABASE_URL has no fallback**
+   - Used in: src/db/client.ts
+   - Risk: Application will crash if not set
+   - Recommendation: Add validation at startup
+
+### Recommendations
+
+- Move API keys from .env to secure vault (AWS Secrets Manager, etc.)
+- Add .env.example for documentation
+- Implement environment validation at startup
+- Use different secrets per environment
+```
+
+**Execution time:** 5-15 seconds depending on project size and model.
+
+---
+
+### /suggest
+
+Get AI suggestions for improving a specific variable.
+
+```bash
+/suggest <variable-name>
+```
+
+**Aliases:** `su`
+
+<ParamField path="variable-name" type="string" required>
+  Environment variable to get suggestions for.
+</ParamField>
+
+**Provides:**
+- Better naming conventions
+- Value format recommendations
+- Security improvements
+- Related variables to consider
+
+**Examples:**
+
+```bash
+❯ /suggest API_KEY
+❯ /suggest DB_URL
+❯ /suggest PORT
+```
+
+**Example output:**
+```markdown
+## Suggestions for API_KEY
+
+### Naming
+- Consider more specific name: `STRIPE_API_KEY` or `OPENAI_API_KEY`
+- Use consistent prefix for related keys: `STRIPE_SECRET_KEY`, `STRIPE_PUBLIC_KEY`
+
+### Security
+- Ensure this is in `.gitignore`
+- Rotate keys regularly (every 90 days)
+- Use different keys per environment
+- Consider key management service (AWS KMS, HashiCorp Vault)
+
+### Related Variables
+- `API_BASE_URL` - Base URL for API
+- `API_TIMEOUT` - Request timeout in ms
+- `API_RETRY_ATTEMPTS` - Number of retries
+```
+
+---
+
+### /explain
+
+Get AI explanation of a variable's purpose and usage.
+
+```bash
+/explain <variable-name>
+```
+
+**Aliases:** `ex`
+
+<ParamField path="variable-name" type="string" required>
+  Environment variable to explain.
+</ParamField>
+
+**Explanation includes:**
+- Typical purpose
+- Common values and formats
+- Security classification
+- Alternative naming conventions
+- Framework-specific usage
+
+**Examples:**
+
+```bash
+❯ /explain NODE_ENV
+❯ /explain DATABASE_URL
+❯ /explain JWT_SECRET
+```
+
+**Example output:**
+```markdown
+## NODE_ENV
+
+### Purpose
+Controls the application's runtime environment and enables/disables certain features.
+
+### Common Values
+- `development` - Local development with hot reload, verbose logging
+- `production` - Production deployment with optimizations
+- `test` - Running test suites
+- `staging` - Pre-production testing environment
+
+### Security Classification
+**Not sensitive** - Safe to commit in documentation
+
+### Usage Patterns
+
+**Express.js:**
+```javascript
+if (process.env.NODE_ENV === 'production') {
+  app.use(compression())
+}
+```
+
+**Vite:**
+```javascript
+if (import.meta.env.MODE === 'production') {
+  // Production-only code
+}
+```
+
+### Alternative Names
+- `ENV`
+- `ENVIRONMENT`
+- `APP_ENV`
+```
+
+---
+
+### /template
+
+Generate AI-powered .env template for a specific project type.
+
+```bash
+/template <project-type> [requirements]
+```
+
+**Aliases:** `tpl`
+
+<ParamField path="project-type" type="string" required>
+  Type of project to generate template for.
+  
+  **Examples:**
+  - `nextjs`
+  - `express`
+  - `django`
+  - `rails`
+  - `nestjs`
+  - `vue`
+  - `react-native`
+</ParamField>
+
+<ParamField path="requirements" type="string">
+  Additional requirements or features.
+  
+  **Examples:**
+  - `postgres redis stripe`
+  - `mongodb jwt oauth`
+  - `mysql s3 sendgrid`
+</ParamField>
+
+**Examples:**
+
+```bash Next.js App
+❯ /template nextjs
+```
+
+```bash Express API with Auth
+❯ /template express postgres jwt redis
+```
+
+```bash Django Project
+❯ /template django postgresql celery s3
+```
+
+**Generated output:**
+```bash
+# Generated .env template for Next.js + PostgreSQL + Redis + Stripe
+
+# ─── Database ────────────────────────────────────
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+DB_POOL_SIZE=20
+
+# ─── Redis Cache ─────────────────────────────────
+REDIS_URL=redis://localhost:6379
+REDIS_PREFIX=myapp:
+
+# ─── Stripe Payment ──────────────────────────────
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# ─── Authentication ──────────────────────────────
+JWT_SECRET=your-256-bit-secret
+SESSION_SECRET=your-session-secret
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-nextauth-secret
+
+# ─── Application ─────────────────────────────────
+NODE_ENV=development
+PORT=3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# ─── Email (Optional) ────────────────────────────
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+```
+
+---
+
+## Conversation Management
+
+### /history
+
+Show AI conversation history.
+
+```bash
+/history
+```
+
+**Aliases:** `hist`
+
+**Displays:**
+- Recent conversation messages
+- Timestamps
+- User queries and AI responses
+- Limited to last 20 messages (configurable)
+
+**Example:**
+
+```bash
+❯ /history
+```
+
+**Output:**
+```
+┌─ CONVERSATION HISTORY ──────────────────────
+
+[2024-03-05 14:23:15] USER
+What are best practices for API keys?
+
+[2024-03-05 14:23:18] ASSISTANT
+**API Key Best Practices:**
+1. Never commit to git
+2. Use environment-specific keys
+...
+
+[2024-03-05 14:25:42] USER
+How should I store JWT secrets?
+
+[2024-03-05 14:25:45] ASSISTANT
+**JWT Secret Storage:**
+...
+
+  Total messages: 8
+  Oldest: 2024-03-05 14:15:30
+```
+
+---
+
+### /clear-history
+
+Clear AI conversation history.
+
+```bash
+/clear-history
+```
+
+**Behavior:**
+- Clears all conversation context
+- Next message starts fresh conversation
+- Does not affect persisted AI config
+
+**Example:**
+
+```bash
+❯ /clear-history
+
+✅ Conversation history cleared
+```
+
+---
+
+## Advanced Features
+
+### Streaming Responses
+
+All AI commands support streaming responses:
+
+```bash
+❯ /ask How do environment variables work in Docker?
+
+[AI response appears word-by-word in real-time]
+Environment variables in Docker can be set in multiple ways:
+
+1. **Dockerfile ENV instruction**
+   ```dockerfile
+   ENV NODE_ENV=production
+   ```
+...
+```
+
+**Benefits:**
+- See response as it's generated
+- Lower perceived latency
+- Can interrupt long responses
+
+---
+
+### Context Awareness
+
+The AI has context about your project:
+
+```bash
+❯ scan
+# AI sees that you have 24 env vars, 3 missing
+
+❯ /ask What should I fix first?
+# AI response considers your specific project state
+
+Based on your scan results, you should prioritize:
+
+1. **Define the 3 missing variables** (will cause crashes)
+   - JWT_SECRET
+   - DATABASE_URL
+   - REDIS_URL
+...
+```
+
+**Context includes:**
+- Recent scan results
+- Risk analysis findings
+- Project structure
+- Missing/unused variables
+
+---
+
+### Security Risk Assessment
+
+AI can assess specific variables:
+
+```bash
+❯ /suggest API_KEY
+
+# AI analyzes variable name and usage patterns
+# Returns risk assessment with explanation
+
+Risk Level: HIGH
+
+Explanation:
+- Generic name "API_KEY" could refer to any API
+- Used in 5 different files
+- No indication of environment-specific values
+
+Recommendations:
+- Use specific names: STRIPE_API_KEY, OPENAI_API_KEY
+- Implement key rotation
+- Add validation at application startup
+```
+
+---
+
+## Configuration File
+
+AI settings are persisted at `~/.envark/ai-config.json`:
+
+```json
+{
+  "provider": "openai",
+  "apiKey": "sk-proj-...",
+  "model": "gpt-4o",
+  "lastUpdated": "2024-03-05T14:30:00.000Z"
+}
+```
+
+**Security:**
+- File permissions: `600` (user read/write only)
+- API keys stored in plaintext (consider using system keychain)
+- Not synced to git repositories
+
+**Manual editing:**
+```bash
+# View config
+cat ~/.envark/ai-config.json
+
+# Edit config
+vim ~/.envark/ai-config.json
+
+# Clear config
+rm ~/.envark/ai-config.json
+```
+
+---
+
+## Error Handling
+
+**Not configured:**
+```bash
+❯ /ask How do I use Redis?
+
+❌ AI not configured. Use /config to set up a provider.
+```
+
+**Invalid API key:**
+```bash
+❯ /ask test
+
+❌ AI Error: Invalid API key. Status: 401
+```
+
+**Rate limit:**
+```bash
+❌ AI Error: Rate limit exceeded. Please try again in 20 seconds.
+```
+
+**Network error:**
+```bash
+❌ AI Error: Network request failed. Check your internet connection.
+```
+
+**Ollama not running:**
+```bash
+❌ AI Error: Could not connect to Ollama. Is it running? (http://localhost:11434)
+```
+
+---
+
+## Cost Considerations
+
+### OpenAI Pricing (as of 2024)
+
+| Model | Input | Output |
+|-------|-------|--------|
+| GPT-4o | $2.50/1M tokens | $10.00/1M tokens |
+| GPT-4o-mini | $0.15/1M tokens | $0.60/1M tokens |
+| GPT-4-turbo | $10.00/1M tokens | $30.00/1M tokens |
+
+**Typical command costs:**
+- `/ask` - $0.001 - $0.01 per query
+- `/analyze` - $0.05 - $0.20 per analysis
+- `/explain` - $0.002 - $0.01 per variable
+
+### Anthropic Pricing
+
+| Model | Input | Output |
+|-------|-------|--------|
+| Claude 4 Sonnet | $3.00/1M tokens | $15.00/1M tokens |
+| Claude 4 Opus | $15.00/1M tokens | $75.00/1M tokens |
+| Claude 3.5 Sonnet | $3.00/1M tokens | $15.00/1M tokens |
+
+### Gemini Pricing
+
+| Model | Input | Output |
+|-------|-------|--------|
+| Gemini 1.5 Pro | $1.25/1M tokens | $5.00/1M tokens |
+| Gemini 1.5 Flash | $0.075/1M tokens | $0.30/1M tokens |
+
+### Ollama (Free)
+
+Runs locally - no API costs!
+
+**Requirements:**
+- 8GB+ RAM for llama3.2
+- 16GB+ RAM for larger models
+
+---
+
+## Privacy & Security
+
+**Data sent to AI:**
+- Variable names (not values)
+- File paths (relative, not absolute)
+- Code snippets (context around env usage)
+- Your questions and conversation history
+
+**Data NOT sent:**
+- Actual environment variable values
+- File contents (except relevant snippets)
+- Git history
+- Secrets or credentials
+
+**Value masking:**
+If AI needs to see a value pattern:
+```
+Actual:  sk_test_1234567890abcdefghij
+Masked:  sk***ij
+```
+
+**Local-only option:**
+Use Ollama for complete privacy:
+```bash
+❯ /config ollama llama3.2
+# All processing happens on your machine
+```
+
+---
+
+## Examples
+
+### Onboarding New Developer
+
+```bash
+❯ /template nextjs postgres redis
+❯ generate .env.example
+❯ /ask What environment variables do new developers need to set?
+```
+
+### Security Audit
+
+```bash
+❯ scan
+❯ risk critical
+❯ /analyze
+❯ /ask What are the most critical security issues?
+```
+
+### Debugging Configuration
+
+```bash
+❯ usage DATABASE_URL
+❯ /explain DATABASE_URL
+❯ /ask Why is my database connection failing?
+```
+
+### Migration Planning
+
+```bash
+❯ scan
+❯ /ask How should I migrate these env vars to AWS Parameter Store?
+❯ /ask What's the best way to handle secrets in Kubernetes?
+```

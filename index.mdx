@@ -1,97 +1,265 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Envark Documentation"
+description: "Production-quality CLI tool and MCP server that maps, analyzes, and guards environment variables across your entire codebase"
+mode: custom
 ---
 
-## Setting up
+<div className="relative bg-gradient-to-br dark:from-[#0a0e1a] dark:to-[#1a1d27] from-gray-50 to-gray-100 py-20 overflow-hidden">
+  <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+  <div className="relative max-w-6xl mx-auto px-6">
+    <div className="grid lg:grid-cols-12 gap-12 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-5xl lg:text-6xl font-bold dark:text-white text-gray-900 mb-6">
+          Guard Your Environment Variables
+        </h1>
+        <p className="text-xl dark:text-gray-300 text-gray-600 mb-8 max-w-2xl">
+          Stop runtime crashes from missing env vars. Envark maps, analyzes, and protects environment variables across 7+ languages with interactive TUI and AI-powered insights.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 rounded-lg bg-[#242b2c] dark:bg-[#238636] text-white font-semibold hover:bg-[#1a2021] dark:hover:bg-[#2ea043] transition-colors no-underline"
+          >
+            Get Started
+            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+          <a 
+            href="/installation" 
+            className="inline-flex items-center px-6 py-3 rounded-lg border-2 dark:border-white/30 border-gray-300 dark:bg-white/10 bg-white dark:text-white text-gray-900 font-semibold dark:hover:bg-white/20 hover:bg-gray-50 transition-colors no-underline"
+          >
+            Installation
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 hidden lg:block">
+        <div className="dark:bg-[#1a1d27]/90 bg-white rounded-2xl dark:border-[#6a5acd]/70 border-gray-200 border-2 p-6 shadow-2xl dark:shadow-[0_0_40px_10px_rgba(106,90,205,0.3)]">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+          </div>
+          <pre className="text-sm dark:text-gray-300 text-gray-700 overflow-x-auto"><code>{`$ envark scan
 
-Get your documentation site up and running in minutes.
+🔍 Scanning project...
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Found 24 environment variables
+├─ 20 defined
+├─ 3 missing ⚠️
+└─ 2 critical risks 🚨
 
-## Make it yours
+STRIPE_SECRET_KEY
+  Risk: CRITICAL
+  Issue: Used but not defined
+  Files: src/billing.ts:42`}</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Design a docs site that looks great and empowers your users.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold dark:text-white text-gray-900 mb-4">Get Started in Minutes</h2>
+    <p className="text-lg dark:text-gray-400 text-gray-600">Install Envark and scan your first project</p>
+  </div>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+  <Steps>
+    <Step title="Install Envark">
+      Install globally via npm or run instantly with npx:
+      
+      <CodeGroup>
+      ```bash npm
+      npm install -g envark
+      ```
+      
+      ```bash npx
+      npx envark
+      ```
+      
+      ```bash yarn
+      yarn global add envark
+      ```
+      
+      ```bash pnpm
+      pnpm add -g envark
+      ```
+      </CodeGroup>
+    </Step>
 
-## Create beautiful pages
+    <Step title="Launch Interactive TUI">
+      Start the interactive terminal interface and run your first scan:
+      
+      ```bash
+      envark
+      ```
+      
+      Type `/scan` or press `s` to analyze your project. Envark will discover all environment variables across JavaScript, TypeScript, Python, Go, Rust, Shell, and Docker files.
+      
+      <Note>
+        The TUI includes dropdown command menus, real-time analysis, and AI-powered suggestions. Press `/` to see all available commands.
+      </Note>
+    </Step>
 
-Everything you need to create world-class documentation.
+    <Step title="Review Risk Analysis">
+      Envark automatically classifies environment variables by risk level:
+      
+      - **Critical** — Used but not defined, will cause runtime crashes
+      - **High** — Secret-like names in committed files
+      - **Medium** — Multiple usages without defaults
+      - **Low** — Undocumented or unused variables
+      
+      Run `/risk` to see detailed risk analysis with file locations and usage counts.
+    </Step>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+    <Step title="Generate .env Template">
+      Auto-generate a complete `.env.example` file from your codebase:
+      
+      ```bash
+      envark generate
+      ```
+      
+      Envark extracts all environment variables, adds comments with usage context, and groups related variables together. Perfect for onboarding new developers.
+    </Step>
+  </Steps>
+</div>
 
-## Need inspiration?
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold dark:text-white text-gray-900 mb-4">Core Features</h2>
+    <p className="text-lg dark:text-gray-400 text-gray-600">Everything you need to manage environment variables at scale</p>
+  </div>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+  <CardGroup cols={2}>
+    <Card title="Interactive TUI" icon="terminal" href="/features/interactive-tui">
+      Beautiful terminal interface with dropdown menus, real-time scanning, and one-key commands for instant analysis
+    </Card>
+    <Card title="Multi-Language Support" icon="code" href="/guides/supported-languages">
+      Parse environment variables from JavaScript, TypeScript, Python, Go, Rust, Shell scripts, and Dockerfiles
+    </Card>
+    <Card title="Risk Scoring" icon="shield-halved" href="/features/risk-analysis">
+      Intelligent risk classification catches critical issues before they reach production with automated severity scoring
+    </Card>
+    <Card title="AI Assistant" icon="robot" href="/features/ai-assistant">
+      Powered by OpenAI, Anthropic, Gemini, or Ollama for smart analysis, security recommendations, and config generation
+    </Card>
+    <Card title="MCP Server" icon="plug" href="/mcp/overview">
+      Integrate with Claude, Cursor, VS Code, and Windsurf to give AI assistants deep visibility into your environment
+    </Card>
+    <Card title="Validation & Templates" icon="check-circle" href="/features/validation">
+      Validate .env files against code requirements and auto-generate .env.example templates from your codebase
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold dark:text-white text-gray-900 mb-4">Popular Use Cases</h2>
+    <p className="text-lg dark:text-gray-400 text-gray-600">How teams use Envark to prevent production issues</p>
+  </div>
+
+  <div className="grid md:grid-cols-2 gap-6">
+    <a href="/guides/best-practices" className="group block rounded-2xl dark:border-[#27272a] border-gray-200 border-2 dark:hover:border-[#242b2c] hover:border-gray-400 overflow-hidden transition-colors no-underline">
+      <div className="p-6">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-lg dark:bg-[#242b2c]/20 bg-gray-100 flex items-center justify-center">
+            <svg className="w-6 h-6 dark:text-[#238636] text-[#242b2c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold dark:text-white text-gray-900">Pre-Deployment Checks</h3>
+        </div>
+        <p className="dark:text-gray-400 text-gray-600 text-sm mb-3">
+          Run Envark in CI/CD pipelines to catch missing environment variables before deployment. Prevent runtime crashes and failed deployments.
+        </p>
+        <span className="text-sm dark:text-[#238636] text-[#242b2c] font-medium dark:group-hover:text-[#2ea043] group-hover:text-[#1a2021]">
+          Learn best practices →
+        </span>
+      </div>
+    </a>
+
+    <a href="/features/ai-assistant" className="group block rounded-2xl dark:border-[#27272a] border-gray-200 border-2 dark:hover:border-[#242b2c] hover:border-gray-400 overflow-hidden transition-colors no-underline">
+      <div className="p-6">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-lg dark:bg-[#242b2c]/20 bg-gray-100 flex items-center justify-center">
+            <svg className="w-6 h-6 dark:text-[#238636] text-[#242b2c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold dark:text-white text-gray-900">Security Audits</h3>
+        </div>
+        <p className="dark:text-gray-400 text-gray-600 text-sm mb-3">
+          Use AI analysis to identify hardcoded secrets, exposed API keys, and security vulnerabilities in environment configuration.
+        </p>
+        <span className="text-sm dark:text-[#238636] text-[#242b2c] font-medium dark:group-hover:text-[#2ea043] group-hover:text-[#1a2021]">
+          Explore AI features →
+        </span>
+      </div>
+    </a>
+
+    <a href="/mcp/setup" className="group block rounded-2xl dark:border-[#27272a] border-gray-200 border-2 dark:hover:border-[#242b2c] hover:border-gray-400 overflow-hidden transition-colors no-underline">
+      <div className="p-6">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-lg dark:bg-[#242b2c]/20 bg-gray-100 flex items-center justify-center">
+            <svg className="w-6 h-6 dark:text-[#238636] text-[#242b2c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold dark:text-white text-gray-900">Developer Onboarding</h3>
+        </div>
+        <p className="dark:text-gray-400 text-gray-600 text-sm mb-3">
+          Generate complete .env.example files and integrate with IDEs to help new developers configure their environment instantly.
+        </p>
+        <span className="text-sm dark:text-[#238636] text-[#242b2c] font-medium dark:group-hover:text-[#2ea043] group-hover:text-[#1a2021]">
+          Setup MCP integration →
+        </span>
+      </div>
+    </a>
+
+    <a href="/guides/supported-languages" className="group block rounded-2xl dark:border-[#27272a] border-gray-200 border-2 dark:hover:border-[#242b2c] hover:border-gray-400 overflow-hidden transition-colors no-underline">
+      <div className="p-6">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-lg dark:bg-[#242b2c]/20 bg-gray-100 flex items-center justify-center">
+            <svg className="w-6 h-6 dark:text-[#238636] text-[#242b2c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold dark:text-white text-gray-900">Polyglot Codebases</h3>
+        </div>
+        <p className="dark:text-gray-400 text-gray-600 text-sm mb-3">
+          Analyze environment variables across mixed-language projects with unified reporting for JavaScript, Python, Go, Rust, and more.
+        </p>
+        <span className="text-sm dark:text-[#238636] text-[#242b2c] font-medium dark:group-hover:text-[#2ea043] group-hover:text-[#1a2021]">
+          View supported languages →
+        </span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="dark:bg-gradient-to-br dark:from-[#1a1d27] dark:to-[#242838] bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-12 text-center dark:border-[#27272a] border-gray-200 border">
+    <h2 className="text-3xl font-bold dark:text-white text-gray-900 mb-4">Ready to Guard Your Environment?</h2>
+    <p className="text-lg dark:text-gray-300 text-gray-600 mb-8 max-w-2xl mx-auto">
+      Join developers who prevent production crashes by catching environment variable issues before deployment
+    </p>
+    <div className="flex flex-wrap gap-4 justify-center">
+      <a 
+        href="/quickstart" 
+        className="inline-flex items-center px-6 py-3 rounded-lg bg-[#242b2c] dark:bg-[#238636] text-white font-semibold hover:bg-[#1a2021] dark:hover:bg-[#2ea043] transition-colors no-underline"
+      >
+        Get Started Now
+      </a>
+      <a 
+        href="https://github.com/kstij/Envark" 
+        className="inline-flex items-center px-6 py-3 rounded-lg border-2 dark:border-white/30 border-gray-300 dark:bg-white/10 bg-white dark:text-white text-gray-900 font-semibold dark:hover:bg-white/20 hover:bg-gray-50 transition-colors no-underline"
+      >
+        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+          <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+        </svg>
+        View on GitHub
+      </a>
+    </div>
+  </div>
+</div>
