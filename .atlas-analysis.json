@@ -1,0 +1,113 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Envark",
+  "projectDescription": "Production-quality CLI tool and MCP server that maps, analyzes, and guards environment variables across your entire codebase.",
+  "theme": "aspen",
+  "primaryColor": "#242b2c",
+  "lightColor": "#040404",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/interactive-tui",
+              "features/scanning",
+              "features/risk-analysis",
+              "features/validation",
+              "features/ai-assistant"
+            ]
+          },
+          {
+            "group": "CLI Reference",
+            "pages": [
+              "cli/commands",
+              "cli/tui-commands",
+              "cli/ai-commands",
+              "cli/configuration"
+            ]
+          },
+          {
+            "group": "MCP Integration",
+            "pages": [
+              "mcp/overview",
+              "mcp/setup",
+              "mcp/tools"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/supported-languages",
+              "guides/risk-scoring",
+              "guides/caching",
+              "guides/best-practices"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "MCP Tools",
+            "pages": [
+              "api/get-env-map",
+              "api/get-env-risk",
+              "api/get-missing-envs",
+              "api/validate-env-file",
+              "api/generate-env-template",
+              "api/get-duplicates",
+              "api/get-undocumented",
+              "api/get-env-usage",
+              "api/get-env-graph"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Multi-language environment variable parsing (JavaScript, TypeScript, Python, Go, Rust, Shell, Docker)",
+    "Interactive terminal UI with dropdown menus and commands",
+    "Risk scoring and analysis (Critical, High, Medium, Low, Info)",
+    "MCP server integration for AI assistants (Claude, Cursor, VS Code, Windsurf)",
+    "AI assistant support (OpenAI, Anthropic, Gemini, Ollama)",
+    "Environment variable validation and template generation",
+    "Dependency graph visualization",
+    "Smart caching for performance"
+  ],
+  "publicApiSurface": [
+    "envark (interactive TUI)",
+    "envark scan [filter]",
+    "envark risk [min-level]",
+    "envark missing",
+    "envark duplicates",
+    "envark undocumented",
+    "envark usage <var>",
+    "envark graph",
+    "envark validate [path]",
+    "envark generate [path]",
+    "envark init <ide>",
+    "get_env_map",
+    "get_env_risk",
+    "get_missing_envs",
+    "validate_env_file",
+    "generate_env_template",
+    "get_duplicates",
+    "get_undocumented",
+    "get_env_usage",
+    "get_env_graph"
+  ]
+}
